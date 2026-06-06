@@ -196,15 +196,73 @@ Major Product Releases
 
 # CURRENT VERSION
 
-2.0.0
+2.0.5-homepage-enhanced
 
 Status
 
-Documentation Phase
+Homepage Enhanced Release
 
 ---
 
 # RELEASE HISTORY
+
+## Version 2.0.5-homepage-enhanced
+
+Date
+
+2026-06-06
+
+Time
+
+20:05 IST
+
+Status
+
+Homepage Enhanced Release
+
+Type
+
+RELEASE
+
+---
+
+Description
+
+* Homepage conversion optimization
+* Trust signal implementation
+* Real vehicle image integration
+* Mobile sticky CTA implementation
+* Hero section enhancement
+* SEO improvements
+* AI search improvements
+
+---
+
+Files Changed
+
+src/app/page.tsx
+
+src/components/ui/Button.tsx
+
+public/media/toyota_fortuner.png
+
+public/media/toyota_glanza.png
+
+public/media/toyota_hero_showcase.png
+
+public/media/toyota_hyryder.png
+
+public/media/toyota_vellfire.png
+
+HOMEPAGE_ENHANCEMENT_REPORT.md
+
+UI_CONTRAST_FIX_REPORT.md
+
+docs/HOMEPAGE_ENHANCEMENT_REPORT.md
+
+docs/UI_CONTRAST_FIX_REPORT.md
+
+---
 
 ## Version 2.0.0
 
