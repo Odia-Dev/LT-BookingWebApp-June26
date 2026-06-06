@@ -140,10 +140,11 @@ export default function HomePage() {
                 </Button>
               </a>
               <a href="#vehicles" className="w-full sm:w-auto">
-                <Button variant="outline" className="w-full h-12 text-base">
+                <Button variant="secondary" className="w-full h-12 text-base">
                   View Vehicles
                 </Button>
               </a>
+
             </div>
           </div>
           
@@ -232,7 +233,7 @@ export default function HomePage() {
                   </div>
                   <div className="grid grid-cols-2 gap-3 mt-2">
                     <a href={`/vehicles/${veh.name.toLowerCase().replace(/\s/g, "-")}`}>
-                      <Button variant="outline" className="w-full h-10 text-xs font-semibold">
+                      <Button variant="secondary" className="w-full h-10 text-xs font-semibold">
                         Explore
                       </Button>
                     </a>
@@ -242,6 +243,7 @@ export default function HomePage() {
                       </Button>
                     </a>
                   </div>
+
                 </div>
               </div>
             ))}
@@ -293,10 +295,11 @@ export default function HomePage() {
               Get special corporate offers, loyalty exchange bonuses, and attractive interest rates on Toyota Hyryder, Rumion, and Glanza valid this month.
             </p>
             <a href="/offers" className="z-10">
-              <Button variant="secondary" className="bg-white text-[#111111] hover:bg-gray-100 px-8 h-12">
+              <Button variant="secondary" className="px-8 h-12">
                 Explore Offers <ArrowRight className="ml-2 h-4 w-4 inline" />
               </Button>
             </a>
+
           </div>
         </Container>
       </Section>
@@ -442,16 +445,17 @@ export default function HomePage() {
           </p>
           <div className="flex flex-col sm:flex-row gap-4 w-full sm:w-auto mt-2">
             <a href="/book-online" className="w-full sm:w-auto">
-              <Button variant="primary" className="w-full bg-[#EB0A1E] text-white border-transparent hover:bg-[#d0091a]">
+              <Button variant="primary" className="w-full">
                 Book Online
               </Button>
             </a>
             <a href="/contact" className="w-full sm:w-auto">
-              <Button variant="outline" className="w-full border-white text-white hover:bg-white/10">
+              <Button variant="secondary" className="w-full">
                 <PhoneCall className="mr-2 h-4 w-4 inline" /> Contact Sales
               </Button>
             </a>
           </div>
+
         </Container>
       </section>
 
