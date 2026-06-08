@@ -17,6 +17,7 @@ import {
   ClipboardList,
   Loader2
 } from 'lucide-react';
+import LeadQueueDashboard from './leads/LeadQueueDashboard';
 
 export default function AdminDashboardPage() {
   const { user, logout, loading } = useAuth();
@@ -134,12 +135,8 @@ export default function AdminDashboardPage() {
 
             {activeTab === 'bookings' && (
               <div className="flex flex-col gap-6">
-                <h3 className="text-xl font-extrabold text-gray-900 border-b border-gray-100 pb-3">Booking Desk</h3>
-                <div className="flex flex-col items-center justify-center py-12 text-center bg-gray-50 border border-dashed border-gray-250 rounded-2xl p-6">
-                  <Briefcase className="h-10 w-10 text-gray-400 mb-3" />
-                  <h4 className="font-bold text-gray-800">Booking Management Stub</h4>
-                  <p className="text-xs text-gray-500 max-w-xs mt-1">Real-time booking confirmations and ex-showroom token reconciliation will compile here.</p>
-                </div>
+                <h3 className="text-xl font-extrabold text-gray-900 border-b border-gray-100 pb-3">Lead Routing & Bookings Desk</h3>
+                <LeadQueueDashboard />
               </div>
             )}
 
