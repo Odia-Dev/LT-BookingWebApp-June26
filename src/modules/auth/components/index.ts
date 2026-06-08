@@ -1,2 +1,2 @@
-// Components index
+// Components for Auth module
 export {};

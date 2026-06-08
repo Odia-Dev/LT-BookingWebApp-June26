@@ -7,18 +7,18 @@ import { MOCK_VEHICLES } from '@/modules/vehicles';
 import LocationDetailsClient from '@/modules/locations/components/LocationDetailsClient';
 
 interface PageProps {
-  params: Promise<{ slug: string }>;
+  params: Promise<{ location: string }>;
 }
 
 export async function generateStaticParams() {
   return OFFICIAL_LOCATIONS.map(loc => ({
-    slug: loc.id
+    location: loc.id
   }));
 }
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const resolvedParams = await params;
-  const location = LocationRepository.getById(resolvedParams.slug);
+  const location = LocationRepository.getById(resolvedParams.location);
   if (!location) return {};
 
   const title = `Laxmi Toyota Showroom in ${location.name} | Phone, Address & Offers`;
@@ -27,14 +27,14 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   return baseGenerateMetadata({
     title,
     description,
-    canonicalUrl: `/locations/${resolvedParams.slug}`,
+    canonicalUrl: `/locations/${resolvedParams.location}`,
     ogImage: '/media/toyota_hero_showcase.png',
   });
 }
 
 export default async function LocationDetailPage({ params }: PageProps) {
   const resolvedParams = await params;
-  const location = LocationRepository.getById(resolvedParams.slug);
+  const location = LocationRepository.getById(resolvedParams.location);
 
   if (!location) {
     notFound();
@@ -70,7 +70,7 @@ export default async function LocationDetailPage({ params }: PageProps) {
         '@type': 'ListItem',
         'position': 3,
         'name': location.name,
-        'item': `https://laxmitoyota.com/locations/${resolvedParams.slug}`
+        'item': `https://laxmitoyota.com/locations/${resolvedParams.location}`
       }
     ]
   };
