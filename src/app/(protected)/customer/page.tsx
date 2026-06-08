@@ -9,6 +9,8 @@ import { Badge } from '@/components/feedback/Badge';
 import { Button } from '@/components/ui/Button';
 import { useBookings } from '@/modules/bookings/hooks';
 import { BookingCard, BookingDetailsPanel } from '@/modules/bookings/components';
+import { usePayments } from '@/modules/payments/hooks';
+import { PaymentHistoryList } from '@/modules/payments/components';
 import { 
   Car, 
   CreditCard, 
@@ -44,6 +46,7 @@ export default function CustomerDashboardPage() {
 
   // Decoupled bookings lookup
   const { bookings, cancelBooking } = useBookings('CUST-001');
+  const { payments } = usePayments('CUST-001');
   const [selectedBookingId, setSelectedBookingId] = useState<string | null>(null);
 
   useEffect(() => {
@@ -237,34 +240,7 @@ export default function CustomerDashboardPage() {
             {activeTab === 'payments' && (
               <div className="flex flex-col gap-6">
                 <h3 className="text-xl font-extrabold text-gray-900 border-b border-gray-100 pb-3">My Payments</h3>
-                
-                {bookings.filter(b => b.status === 'BOOKING_CONFIRMED').length === 0 ? (
-                  <div className="flex flex-col items-center justify-center py-12 text-center bg-gray-50 border border-dashed border-gray-250 rounded-2xl p-6">
-                    <CreditCard className="h-10 w-10 text-gray-400 mb-3" />
-                    <h4 className="font-bold text-gray-800">No Payment Records</h4>
-                    <p className="text-xs text-gray-500 max-w-xs mt-1">Invoice and transaction history from online bookings will appear here.</p>
-                  </div>
-                ) : (
-                  <div className="space-y-4">
-                    {bookings.filter(b => b.status === 'BOOKING_CONFIRMED' || b.status === 'DELIVERED').map(b => (
-                      <div key={b.bookingId} className="p-5 border border-gray-200 rounded-2xl flex justify-between items-center">
-                        <div className="flex gap-3 items-center">
-                          <div className="w-10 h-10 rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center">
-                            <CheckCircle2 className="h-5 w-5" />
-                          </div>
-                          <div>
-                            <span className="font-bold text-xs text-gray-800">{b.vehicleName} Reservation Fee</span>
-                            <p className="text-[10px] font-mono text-gray-400">Booking ID: {b.bookingId}</p>
-                          </div>
-                        </div>
-                        <div className="text-right">
-                          <span className="font-extrabold text-sm text-gray-900">₹25,000.00</span>
-                          <p className="text-[9px] text-gray-400">Paid via Razorpay</p>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
+                <PaymentHistoryList payments={payments} />
               </div>
             )}
 

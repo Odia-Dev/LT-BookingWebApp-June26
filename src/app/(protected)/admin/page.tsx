@@ -15,14 +15,16 @@ import {
   LogOut, 
   ShieldCheck, 
   ClipboardList,
-  Loader2
+  Loader2,
+  CreditCard
 } from 'lucide-react';
 import LeadQueueDashboard from './leads/LeadQueueDashboard';
 import BookingsManagementDashboard from './bookings/BookingsManagementDashboard';
+import { PaymentsDashboard } from '@/modules/payments/components';
 
 export default function AdminDashboardPage() {
   const { user, logout, loading } = useAuth();
-  const [activeTab, setActiveTab] = useState<'overview' | 'bookings' | 'customers' | 'finance' | 'exchange' | 'audit'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'bookings' | 'payments' | 'customers' | 'finance' | 'exchange' | 'audit'>('overview');
   const [bookingSubTab, setBookingSubTab] = useState<'leads' | 'bookings'>('leads');
 
   if (loading) {
@@ -43,9 +45,10 @@ export default function AdminDashboardPage() {
     status: 'ACTIVE'
   };
 
-  const tabs: { id: 'overview' | 'bookings' | 'customers' | 'finance' | 'exchange' | 'audit'; label: string; icon: any; roles: string[] }[] = [
+  const tabs: { id: 'overview' | 'bookings' | 'payments' | 'customers' | 'finance' | 'exchange' | 'audit'; label: string; icon: any; roles: string[] }[] = [
     { id: 'overview', label: 'Admin Overview', icon: ClipboardList, roles: ['SUPER_ADMIN', 'BRANCH_MANAGER', 'SALES_MANAGER', 'FINANCE_MANAGER'] },
     { id: 'bookings', label: 'Manage Bookings', icon: Briefcase, roles: ['SUPER_ADMIN', 'BRANCH_MANAGER', 'SALES_MANAGER'] },
+    { id: 'payments', label: 'Manage Payments', icon: CreditCard, roles: ['SUPER_ADMIN', 'BRANCH_MANAGER'] },
     { id: 'customers', label: 'Customer Management', icon: Users, roles: ['SUPER_ADMIN', 'BRANCH_MANAGER'] },
     { id: 'finance', label: 'Finance Applications', icon: FileCheck, roles: ['SUPER_ADMIN', 'BRANCH_MANAGER', 'FINANCE_MANAGER'] },
     { id: 'exchange', label: 'Exchange Appraisals', icon: ShieldCheck, roles: ['SUPER_ADMIN', 'BRANCH_MANAGER', 'SALES_MANAGER'] },
@@ -170,6 +173,13 @@ export default function AdminDashboardPage() {
                 ) : (
                   <BookingsManagementDashboard />
                 )}
+              </div>
+            )}
+
+            {activeTab === 'payments' && (
+              <div className="flex flex-col gap-6">
+                <h3 className="text-xl font-extrabold text-gray-900 border-b border-gray-100 pb-3">Payments Administration</h3>
+                <PaymentsDashboard />
               </div>
             )}
 
