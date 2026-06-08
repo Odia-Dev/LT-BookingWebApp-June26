@@ -21,6 +21,7 @@ import {
 import LeadQueueDashboard from './leads/LeadQueueDashboard';
 import BookingsManagementDashboard from './bookings/BookingsManagementDashboard';
 import { PaymentsDashboard } from '@/modules/payments/components';
+import { FinanceDashboard } from '@/modules/finance';
 
 export default function AdminDashboardPage() {
   const { user, logout, loading } = useAuth();
@@ -197,11 +198,7 @@ export default function AdminDashboardPage() {
             {activeTab === 'finance' && (
               <div className="flex flex-col gap-6">
                 <h3 className="text-xl font-extrabold text-gray-900 border-b border-gray-100 pb-3">Finance Reviews</h3>
-                <div className="flex flex-col items-center justify-center py-12 text-center bg-gray-50 border border-dashed border-gray-250 rounded-2xl p-6">
-                  <FileCheck className="h-10 w-10 text-gray-400 mb-3" />
-                  <h4 className="font-bold text-gray-800">Finance Verification Stub</h4>
-                  <p className="text-xs text-gray-500 max-w-xs mt-1">List of loan qualification documents, salary summaries, and bank verification statuses.</p>
-                </div>
+                <FinanceDashboard />
               </div>
             )}
 
