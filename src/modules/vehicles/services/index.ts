@@ -150,8 +150,21 @@ export class VehicleRepository {
   }
 
   static getBySlug(slug: string): Vehicle | undefined {
-    return MOCK_VEHICLES.find(v => v.slug === slug && v.status === 'ACTIVE');
+    const cleanSlug = slug.toLowerCase().trim().replace(/^toyota-/, '').replace(/-/, '');
+    return MOCK_VEHICLES.find(v => {
+      const vCleanSlug = v.slug.replace(/^toyota-/, '').replace(/-/, '');
+      const vId = v.vehicleId.toLowerCase();
+      return (
+        v.slug === slug || 
+        v.vehicleId === slug || 
+        vCleanSlug.includes(cleanSlug) || 
+        cleanSlug.includes(vCleanSlug) ||
+        vId.includes(cleanSlug) ||
+        cleanSlug.includes(vId)
+      ) && v.status === 'ACTIVE';
+    });
   }
+
 }
 
 export class VehicleSearchService {

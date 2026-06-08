@@ -349,4 +349,8 @@ export const VehicleCompareCard: React.FC<VehicleCompareCardProps> = ({ vehicle,
 };
 
 export { default as VehicleListingClient } from './VehicleListingClient';
+export { default as VehicleDetailPageClient } from './VehicleDetailPageClient';
+export { default as VehicleLocationClient } from './VehicleLocationClient';
+
+
 
