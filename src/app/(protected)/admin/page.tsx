@@ -18,10 +18,12 @@ import {
   Loader2
 } from 'lucide-react';
 import LeadQueueDashboard from './leads/LeadQueueDashboard';
+import BookingsManagementDashboard from './bookings/BookingsManagementDashboard';
 
 export default function AdminDashboardPage() {
   const { user, logout, loading } = useAuth();
   const [activeTab, setActiveTab] = useState<'overview' | 'bookings' | 'customers' | 'finance' | 'exchange' | 'audit'>('overview');
+  const [bookingSubTab, setBookingSubTab] = useState<'leads' | 'bookings'>('leads');
 
   if (loading) {
     return (
@@ -135,8 +137,39 @@ export default function AdminDashboardPage() {
 
             {activeTab === 'bookings' && (
               <div className="flex flex-col gap-6">
-                <h3 className="text-xl font-extrabold text-gray-900 border-b border-gray-100 pb-3">Lead Routing & Bookings Desk</h3>
-                <LeadQueueDashboard />
+                <div className="flex justify-between items-center border-b border-gray-100 pb-3 flex-wrap gap-4 text-left">
+                  <h3 className="text-xl font-extrabold text-gray-900 font-mono tracking-tight">Lead & Booking Control</h3>
+                  
+                  {/* Sub tab toggler */}
+                  <div className="flex gap-1.5 p-1 bg-gray-100 rounded-xl">
+                    <button
+                      onClick={() => setBookingSubTab('leads')}
+                      className={`px-4 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                        bookingSubTab === 'leads'
+                          ? 'bg-white text-gray-900 shadow-sm'
+                          : 'text-gray-500 hover:text-gray-900'
+                      }`}
+                    >
+                      CRM Lead Queue
+                    </button>
+                    <button
+                      onClick={() => setBookingSubTab('bookings')}
+                      className={`px-4 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                        bookingSubTab === 'bookings'
+                          ? 'bg-white text-gray-900 shadow-sm'
+                          : 'text-gray-500 hover:text-gray-900'
+                      }`}
+                    >
+                      Bookings Registry
+                    </button>
+                  </div>
+                </div>
+
+                {bookingSubTab === 'leads' ? (
+                  <LeadQueueDashboard />
+                ) : (
+                  <BookingsManagementDashboard />
+                )}
               </div>
             )}
 

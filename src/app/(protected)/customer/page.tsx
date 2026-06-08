@@ -1,11 +1,14 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { useAuth } from '@/modules/auth';
 import { Container } from '@/components/layout/Container';
 import { Section } from '@/components/layout/Section';
 import { Badge } from '@/components/feedback/Badge';
 import { Button } from '@/components/ui/Button';
+import { useBookings } from '@/modules/bookings/hooks';
+import { BookingCard, BookingDetailsPanel } from '@/modules/bookings/components';
 import { 
   Car, 
   CreditCard, 
@@ -17,12 +20,37 @@ import {
   MapPin, 
   Phone, 
   Mail,
-  Loader2
+  Loader2,
+  Calendar,
+  Building,
+  CheckCircle2,
+  Clock,
+  ChevronRight,
+  ClipboardList
 } from 'lucide-react';
 
 export default function CustomerDashboardPage() {
   const { user, logout, loading } = useAuth();
+  const searchParams = useSearchParams();
+  const tabParam = searchParams.get('tab');
+  
   const [activeTab, setActiveTab] = useState<'profile' | 'bookings' | 'payments' | 'finance' | 'exchange'>('profile');
+
+  useEffect(() => {
+    if (tabParam && ['profile', 'bookings', 'payments', 'finance', 'exchange'].includes(tabParam)) {
+      setActiveTab(tabParam as any);
+    }
+  }, [tabParam]);
+
+  // Decoupled bookings lookup
+  const { bookings, cancelBooking } = useBookings('CUST-001');
+  const [selectedBookingId, setSelectedBookingId] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (bookings.length > 0 && !selectedBookingId) {
+      setSelectedBookingId(bookings[0].bookingId);
+    }
+  }, [bookings, selectedBookingId]);
 
   if (loading) {
     return (
@@ -34,9 +62,9 @@ export default function CustomerDashboardPage() {
 
   // Fallback user details for mock illustration
   const currentUser = user || {
-    displayName: 'Verified Customer',
+    displayName: 'Sudhanshu Sekhar',
     email: 'customer@laxmitoyota.com',
-    phoneNumber: '9437012345',
+    phoneNumber: '9437011223',
     role: 'CUSTOMER',
     verificationLevel: 2,
     status: 'ACTIVE'
@@ -49,6 +77,21 @@ export default function CustomerDashboardPage() {
     { id: 'finance', label: 'My Finance', icon: FileText },
     { id: 'exchange', label: 'My Exchange', icon: RefreshCw }
   ] as const;
+
+  const selectedBooking = bookings.find(b => b.bookingId === selectedBookingId);
+
+  const getStatusBadge = (status: string) => {
+    switch(status) {
+      case 'BOOKING_CONFIRMED':
+      case 'CONFIRMED':
+      case 'DELIVERED':
+        return <span className="text-[10px] bg-emerald-50 text-emerald-600 px-2 py-0.5 rounded-full font-bold">Confirmed</span>;
+      case 'CANCELLED':
+        return <span className="text-[10px] bg-red-50 text-red-600 px-2 py-0.5 rounded-full font-bold">Cancelled</span>;
+      default:
+        return <span className="text-[10px] bg-amber-50 text-amber-600 px-2 py-0.5 rounded-full font-bold">{status}</span>;
+    }
+  };
 
   return (
     <div className="bg-gray-50 min-h-screen">
@@ -149,47 +192,131 @@ export default function CustomerDashboardPage() {
             {activeTab === 'bookings' && (
               <div className="flex flex-col gap-6">
                 <h3 className="text-xl font-extrabold text-gray-900 border-b border-gray-100 pb-3">My Bookings</h3>
-                <div className="flex flex-col items-center justify-center py-12 text-center bg-gray-50 border border-dashed border-gray-250 rounded-2xl p-6">
-                  <Car className="h-10 w-10 text-gray-400 mb-3" />
-                  <h4 className="font-bold text-gray-800">No Active Bookings</h4>
-                  <p className="text-xs text-gray-500 max-w-xs mt-1">You haven\'t reserved any vehicles yet. Explore the showroom page and begin qualification.</p>
-                  <a href="/vehicles" className="mt-4">
-                    <Button variant="primary" className="h-9 px-6 text-xs font-semibold">Explore Showroom</Button>
-                  </a>
-                </div>
+                
+                {bookings.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center py-12 text-center bg-gray-55 border border-dashed border-gray-250 rounded-2xl p-6">
+                    <Car className="h-10 w-10 text-gray-400 mb-3" />
+                    <h4 className="font-bold text-gray-800">No Active Bookings</h4>
+                    <p className="text-xs text-gray-500 max-w-xs mt-1">You haven't reserved any vehicles yet. Explore the showroom page and begin qualification.</p>
+                    <a href="/vehicles" className="mt-4">
+                      <Button variant="primary" className="h-9 px-6 text-xs font-semibold">Explore Showroom</Button>
+                    </a>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-start">
+                    
+                    {/* Booking list using BookingCard */}
+                    <div className="md:col-span-1 flex flex-col gap-3">
+                      {bookings.map(b => (
+                        <BookingCard
+                          key={b.bookingId}
+                          booking={b}
+                          isSelected={b.bookingId === selectedBookingId}
+                          onClick={() => setSelectedBookingId(b.bookingId)}
+                        />
+                      ))}
+                    </div>
+
+                    {/* Selected Booking details panel using BookingDetailsPanel */}
+                    <div className="md:col-span-2 border border-gray-150 rounded-2xl overflow-hidden bg-white shadow-sm">
+                      {selectedBooking ? (
+                        <BookingDetailsPanel
+                          booking={selectedBooking}
+                          showAdminControls={false}
+                          onCancel={() => cancelBooking(selectedBooking.bookingId, 'CUSTOMER', 'Customer requested cancellation from portal')}
+                        />
+                      ) : (
+                        <div className="text-center text-xs text-gray-400 py-12">Select a booking to view details.</div>
+                      )}
+                    </div>
+                  </div>
+                )}
               </div>
             )}
 
             {activeTab === 'payments' && (
               <div className="flex flex-col gap-6">
                 <h3 className="text-xl font-extrabold text-gray-900 border-b border-gray-100 pb-3">My Payments</h3>
-                <div className="flex flex-col items-center justify-center py-12 text-center bg-gray-50 border border-dashed border-gray-250 rounded-2xl p-6">
-                  <CreditCard className="h-10 w-10 text-gray-400 mb-3" />
-                  <h4 className="font-bold text-gray-800">No Payment Records</h4>
-                  <p className="text-xs text-gray-500 max-w-xs mt-1">Invoice and transaction history from online bookings will appear here.</p>
-                </div>
+                
+                {bookings.filter(b => b.status === 'BOOKING_CONFIRMED').length === 0 ? (
+                  <div className="flex flex-col items-center justify-center py-12 text-center bg-gray-50 border border-dashed border-gray-250 rounded-2xl p-6">
+                    <CreditCard className="h-10 w-10 text-gray-400 mb-3" />
+                    <h4 className="font-bold text-gray-800">No Payment Records</h4>
+                    <p className="text-xs text-gray-500 max-w-xs mt-1">Invoice and transaction history from online bookings will appear here.</p>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {bookings.filter(b => b.status === 'BOOKING_CONFIRMED' || b.status === 'DELIVERED').map(b => (
+                      <div key={b.bookingId} className="p-5 border border-gray-200 rounded-2xl flex justify-between items-center">
+                        <div className="flex gap-3 items-center">
+                          <div className="w-10 h-10 rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center">
+                            <CheckCircle2 className="h-5 w-5" />
+                          </div>
+                          <div>
+                            <span className="font-bold text-xs text-gray-800">{b.vehicleName} Reservation Fee</span>
+                            <p className="text-[10px] font-mono text-gray-400">Booking ID: {b.bookingId}</p>
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <span className="font-extrabold text-sm text-gray-900">₹25,000.00</span>
+                          <p className="text-[9px] text-gray-400">Paid via Razorpay</p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             )}
 
             {activeTab === 'finance' && (
               <div className="flex flex-col gap-6">
                 <h3 className="text-xl font-extrabold text-gray-900 border-b border-gray-100 pb-3">My Finance Applications</h3>
-                <div className="flex flex-col items-center justify-center py-12 text-center bg-gray-50 border border-dashed border-gray-250 rounded-2xl p-6">
-                  <FileText className="h-10 w-10 text-gray-400 mb-3" />
-                  <h4 className="font-bold text-gray-800">No Finance Applications</h4>
-                  <p className="text-xs text-gray-500 max-w-xs mt-1">You have no active finance proposals. You can submit loan applications during booking qualification.</p>
-                </div>
+                
+                {bookings.filter(b => b.financeIntent).length === 0 ? (
+                  <div className="flex flex-col items-center justify-center py-12 text-center bg-gray-50 border border-dashed border-gray-250 rounded-2xl p-6">
+                    <FileText className="h-10 w-10 text-gray-400 mb-3" />
+                    <h4 className="font-bold text-gray-800">No Finance Applications</h4>
+                    <p className="text-xs text-gray-500 max-w-xs mt-1">You have no active finance proposals. You can submit loan applications during booking qualification.</p>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {bookings.filter(b => b.financeIntent).map(b => (
+                      <div key={b.bookingId} className="p-5 border border-gray-200 rounded-2xl flex justify-between items-center">
+                        <div>
+                          <span className="font-bold text-xs text-gray-800">{b.vehicleName} Finance Review</span>
+                          <p className="text-[10px] text-gray-400">Status: Assigned to Finance Manager</p>
+                        </div>
+                        <span className="text-xs bg-amber-50 text-amber-500 font-bold px-2 py-0.5 rounded">In Progress</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             )}
 
             {activeTab === 'exchange' && (
               <div className="flex flex-col gap-6">
                 <h3 className="text-xl font-extrabold text-gray-900 border-b border-gray-100 pb-3">My Exchange Leads</h3>
-                <div className="flex flex-col items-center justify-center py-12 text-center bg-gray-50 border border-dashed border-gray-250 rounded-2xl p-6">
-                  <RefreshCw className="h-10 w-10 text-gray-400 mb-3" />
-                  <h4 className="font-bold text-gray-800">No Exchange Valuations</h4>
-                  <p className="text-xs text-gray-500 max-w-xs mt-1">Your old vehicle exchange appraisals and evaluation statuses will appear here.</p>
-                </div>
+                
+                {bookings.filter(b => b.exchangeIntent).length === 0 ? (
+                  <div className="flex flex-col items-center justify-center py-12 text-center bg-gray-50 border border-dashed border-gray-250 rounded-2xl p-6">
+                    <RefreshCw className="h-10 w-10 text-gray-400 mb-3" />
+                    <h4 className="font-bold text-gray-800">No Exchange Valuations</h4>
+                    <p className="text-xs text-gray-500 max-w-xs mt-1">Your old vehicle exchange appraisals and evaluation statuses will appear here.</p>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {bookings.filter(b => b.exchangeIntent).map(b => (
+                      <div key={b.bookingId} className="p-5 border border-gray-200 rounded-2xl flex justify-between items-center">
+                        <div>
+                          <span className="font-bold text-xs text-gray-800">{b.vehicleName} Appraisal Review</span>
+                          <p className="text-[10px] text-gray-400">Status: Assigned to Exchange Coordinator</p>
+                        </div>
+                        <span className="text-xs bg-blue-50 text-blue-500 font-bold px-2 py-0.5 rounded">Inspection Pending</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             )}
           </main>
