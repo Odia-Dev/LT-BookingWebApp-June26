@@ -1,2 +1,1 @@
-// Module-specific UI skeletons for module: analytics
-export {};
+export { AnalyticsDashboard } from "./AnalyticsDashboard";

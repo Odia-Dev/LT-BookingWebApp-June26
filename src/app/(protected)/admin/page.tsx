@@ -16,7 +16,8 @@ import {
   ShieldCheck, 
   ClipboardList,
   Loader2,
-  CreditCard
+  CreditCard,
+  BarChart3
 } from 'lucide-react';
 import LeadQueueDashboard from './leads/LeadQueueDashboard';
 import BookingsManagementDashboard from './bookings/BookingsManagementDashboard';
@@ -24,10 +25,11 @@ import { PaymentsDashboard } from '@/modules/payments/components';
 import { FinanceDashboard } from '@/modules/finance';
 import { ExchangeDashboard } from '@/modules/exchange';
 import { AnalyticsOverview, BranchPerformance, CustomerDirectory } from '@/modules/crm';
+import { AnalyticsDashboard } from '@/modules/analytics';
 
 export default function AdminDashboardPage() {
   const { user, logout, loading } = useAuth();
-  const [activeTab, setActiveTab] = useState<'overview' | 'bookings' | 'payments' | 'customers' | 'finance' | 'exchange' | 'audit'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'bookings' | 'payments' | 'customers' | 'finance' | 'exchange' | 'audit' | 'analytics'>('overview');
   const [bookingSubTab, setBookingSubTab] = useState<'leads' | 'bookings'>('leads');
 
   if (loading) {
@@ -48,13 +50,14 @@ export default function AdminDashboardPage() {
     status: 'ACTIVE'
   };
 
-  const tabs: { id: 'overview' | 'bookings' | 'payments' | 'customers' | 'finance' | 'exchange' | 'audit'; label: string; icon: any; roles: string[] }[] = [
+  const tabs: { id: 'overview' | 'bookings' | 'payments' | 'customers' | 'finance' | 'exchange' | 'audit' | 'analytics'; label: string; icon: any; roles: string[] }[] = [
     { id: 'overview', label: 'Admin Overview', icon: ClipboardList, roles: ['SUPER_ADMIN', 'BRANCH_MANAGER', 'SALES_MANAGER', 'FINANCE_MANAGER'] },
     { id: 'bookings', label: 'Manage Bookings', icon: Briefcase, roles: ['SUPER_ADMIN', 'BRANCH_MANAGER', 'SALES_MANAGER'] },
     { id: 'payments', label: 'Manage Payments', icon: CreditCard, roles: ['SUPER_ADMIN', 'BRANCH_MANAGER'] },
     { id: 'customers', label: 'Customer Management', icon: Users, roles: ['SUPER_ADMIN', 'BRANCH_MANAGER'] },
     { id: 'finance', label: 'Finance Applications', icon: FileCheck, roles: ['SUPER_ADMIN', 'BRANCH_MANAGER', 'FINANCE_MANAGER'] },
     { id: 'exchange', label: 'Exchange Appraisals', icon: ShieldCheck, roles: ['SUPER_ADMIN', 'BRANCH_MANAGER', 'SALES_MANAGER'] },
+    { id: 'analytics', label: 'Analytics & Reports', icon: BarChart3, roles: ['SUPER_ADMIN', 'BRANCH_MANAGER', 'SALES_MANAGER', 'FINANCE_MANAGER'] },
     { id: 'audit', label: 'System Audit Logs', icon: ShieldAlert, roles: ['SUPER_ADMIN'] }
   ];
 
@@ -197,6 +200,13 @@ export default function AdminDashboardPage() {
               <div className="flex flex-col gap-6">
                 <h3 className="text-xl font-extrabold text-gray-900 border-b border-gray-100 pb-3">Exchange Valuation Desk</h3>
                 <ExchangeDashboard />
+              </div>
+            )}
+
+            {activeTab === 'analytics' && (
+              <div className="flex flex-col gap-6">
+                <h3 className="text-xl font-extrabold text-gray-900 border-b border-gray-100 pb-3">Analytics & Operations Reports</h3>
+                <AnalyticsDashboard userRole={currentUser.role as any} />
               </div>
             )}
 
