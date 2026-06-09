@@ -50,63 +50,82 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Check if session cookie exists
-    const session = getCookie('session');
-    if (session) {
-      // Restore mock user based on role in cookie
-      const role = session as UserRole;
-      setUser({
-        uid: `mock-uid-${role.toLowerCase()}`,
-        email: `${role.toLowerCase()}@laxmitoyota.com`,
-        phoneNumber: '9437012345',
-        role,
-        displayName: role.replace('_', ' '),
-        emailVerified: true,
-        status: 'ACTIVE',
-        verificationLevel: role === 'CUSTOMER' ? 2 : 3
-      });
-    }
-    setLoading(false);
+    const { auth } = require('@/core/firebase');
+    const { onAuthStateChanged } = require('firebase/auth');
+    
+    const unsubscribe = onAuthStateChanged(auth, (firebaseUser: any) => {
+      if (firebaseUser) {
+        const email = firebaseUser.email || '';
+        let role: UserRole = 'CUSTOMER';
+        let name = firebaseUser.displayName || 'Customer';
+        
+        if (email === 'admin@laxmitoyota.com') {
+          role = 'SUPER_ADMIN';
+          name = 'Super Admin';
+        } else if (email === 'branch@laxmitoyota.com') {
+          role = 'BRANCH_MANAGER';
+          name = 'Branch Manager';
+        } else if (email === 'sales@laxmitoyota.com') {
+          role = 'SALES_MANAGER';
+          name = 'Sales Manager';
+        } else if (email === 'finance@laxmitoyota.com') {
+          role = 'FINANCE_MANAGER';
+          name = 'Finance Manager';
+        }
+        
+        setUser({
+          uid: firebaseUser.uid,
+          email,
+          phoneNumber: firebaseUser.phoneNumber || '9437012345',
+          role,
+          displayName: name,
+          emailVerified: firebaseUser.emailVerified,
+          status: 'ACTIVE',
+          verificationLevel: role === 'CUSTOMER' ? 2 : 3
+        });
+        setCookie('session', role);
+      } else {
+        setUser(null);
+        deleteCookie('session');
+      }
+      setLoading(false);
+    });
+    return () => unsubscribe();
   }, []);
 
   const loginWithEmail = async (email: string, password: string): Promise<AuthUser> => {
     setLoading(true);
     try {
-      // Simulate network request
-      await new Promise(resolve => setTimeout(resolve, 800));
+      const { auth } = require('@/core/firebase');
+      const { signInWithEmailAndPassword } = require('firebase/auth');
       
+      const userCredential = await signInWithEmailAndPassword(auth, email, password);
+      const firebaseUser = userCredential.user;
       const cleanEmail = email.toLowerCase().trim();
-      let role: UserRole | null = null;
-      let name = '';
+      let role: UserRole = 'CUSTOMER';
+      let name = firebaseUser.displayName || 'Customer';
 
-      if (cleanEmail === 'admin@laxmitoyota.com' && password === 'Admin12345') {
+      if (cleanEmail === 'admin@laxmitoyota.com') {
         role = 'SUPER_ADMIN';
         name = 'Super Admin';
-      } else if (cleanEmail === 'branch@laxmitoyota.com' && password === 'Branch12345') {
+      } else if (cleanEmail === 'branch@laxmitoyota.com') {
         role = 'BRANCH_MANAGER';
         name = 'Branch Manager';
-      } else if (cleanEmail === 'sales@laxmitoyota.com' && password === 'Sales12345') {
+      } else if (cleanEmail === 'sales@laxmitoyota.com') {
         role = 'SALES_MANAGER';
         name = 'Sales Manager';
-      } else if (cleanEmail === 'finance@laxmitoyota.com' && password === 'Finance12345') {
+      } else if (cleanEmail === 'finance@laxmitoyota.com') {
         role = 'FINANCE_MANAGER';
         name = 'Finance Manager';
-      } else if (cleanEmail === 'customer@laxmitoyota.com' && password === 'Customer12345') {
-        role = 'CUSTOMER';
-        name = 'Laxmi Customer';
-      }
-
-      if (!role) {
-        throw new Error('Invalid email or password credentials');
       }
 
       const loggedInUser: AuthUser = {
-        uid: `mock-uid-${role.toLowerCase()}`,
+        uid: firebaseUser.uid,
         email: cleanEmail,
-        phoneNumber: '9437012345',
+        phoneNumber: firebaseUser.phoneNumber || '9437012345',
         role,
         displayName: name,
-        emailVerified: true,
+        emailVerified: firebaseUser.emailVerified,
         status: 'ACTIVE',
         verificationLevel: role === 'CUSTOMER' ? 1 : 3
       };
@@ -125,6 +144,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const loginWithOTP = async (phone: string, code: string): Promise<AuthUser> => {
     setLoading(true);
     try {
+      // OTP Verification simulation over authentication client layers
       await new Promise(resolve => setTimeout(resolve, 800));
       
       const cleanPhone = phone.trim().replace(/\D/g, '');
@@ -132,8 +152,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         throw new Error('Please enter a valid 10-digit mobile number');
       }
 
-      if (code !== '123456') {
-        throw new Error('Invalid OTP code. Use 123456 for test confirmation.');
+      if (code !== '123456' && code !== '1234') {
+        throw new Error('Invalid OTP code. Use 123456 or 1234 for test confirmation.');
       }
 
       const loggedInUser: AuthUser = {
@@ -144,7 +164,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         displayName: 'OTP Customer',
         emailVerified: false,
         status: 'ACTIVE',
-        verificationLevel: 2 // Level 2: OTP verified
+        verificationLevel: 2
       };
 
       setUser(loggedInUser);
@@ -159,14 +179,26 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const logout = async () => {
+    const { auth } = require('@/core/firebase');
+    const { signOut } = require('firebase/auth');
+    try {
+      await signOut(auth);
+    } catch (err) {
+      console.error("Firebase SignOut error:", err);
+    }
     setUser(null);
     deleteCookie('session');
     window.location.href = '/login';
   };
 
   const forgotPassword = async (email: string) => {
-    await new Promise(resolve => setTimeout(resolve, 500));
-    console.log(`Sending password reset link to ${email}`);
+    const { auth } = require('@/core/firebase');
+    const { sendPasswordResetEmail } = require('firebase/auth');
+    try {
+      await sendPasswordResetEmail(auth, email);
+    } catch (err) {
+      console.error("Firebase SendPasswordResetEmail error:", err);
+    }
   };
 
   return (

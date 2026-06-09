@@ -1,49 +1,22 @@
 import { FinanceLead, FinanceLeadStatus, FinanceDocument, DocumentCategory } from '../types';
 import { trackEvent } from '@/modules/analytics/services/analytics';
 import { validateFinanceStatusTransition } from '../validation';
+import { db } from "@/core/firebase";
+import { collection, doc, setDoc, updateDoc, onSnapshot } from "firebase/firestore";
 
-export let MOCK_FINANCE_LEADS: FinanceLead[] = [
-  {
-    id: 'FIN-01062026-000001',
-    financeLeadId: 'FIN-01062026-000001',
-    bookingId: 'LT-BAM-DIG-JUN26-000001',
-    customerId: 'CUST-001',
-    customerName: 'Sudhanshu Sekhar',
-    monthlyIncome: 120000,
-    employerName: 'TCS Ltd.',
-    employmentType: 'Salaried',
-    loanAmountRequested: 800000,
-    loanTenureYears: 5,
-    status: 'UNDER_REVIEW',
-    assignedManagerId: 'MGR-BAM-01',
-    documents: [
-      {
-        documentId: 'doc_01',
-        category: 'Identity Proof',
-        fileName: 'aadhaar_card.pdf',
-        filePath: '/uploads/docs/aadhaar_card.pdf',
-        status: 'VERIFIED',
-        uploadedAt: new Date(Date.now() - 47 * 3600 * 1000).toISOString()
-      },
-      {
-        documentId: 'doc_02',
-        category: 'Income Proof',
-        fileName: 'payslip_may.pdf',
-        filePath: '/uploads/docs/payslip_may.pdf',
-        status: 'PENDING_VERIFICATION',
-        uploadedAt: new Date(Date.now() - 46 * 3600 * 1000).toISOString()
-      }
-    ],
-    createdAt: new Date(Date.now() - 48 * 3600 * 1000).toISOString(),
-    updatedAt: new Date(Date.now() - 46 * 3600 * 1000).toISOString(),
-    timeline: [
-      { action: 'FINANCE_APPLICATION_STARTED', timestamp: new Date(Date.now() - 48.1 * 3600 * 1000).toISOString(), operator: 'SYSTEM' },
-      { action: 'FINANCE_APPLICATION_SUBMITTED', timestamp: new Date(Date.now() - 48 * 3600 * 1000).toISOString(), operator: 'SYSTEM' },
-      { action: 'FINANCE_DOCUMENT_UPLOADED', timestamp: new Date(Date.now() - 47 * 3600 * 1000).toISOString(), operator: 'SYSTEM', notes: 'Aadhaar uploaded.' },
-      { action: 'UNDER_REVIEW', timestamp: new Date(Date.now() - 46 * 3600 * 1000).toISOString(), operator: 'MGR-BAM-01', notes: 'Assigned and review started.' }
-    ]
-  }
-];
+// Seeded local cache synchronized with Firestore in real-time
+export let MOCK_FINANCE_LEADS: FinanceLead[] = [];
+
+// Real-time synchronization setup for Client runtime
+if (typeof window !== "undefined") {
+  onSnapshot(collection(db, "financeLeads"), (snapshot) => {
+    const items: FinanceLead[] = [];
+    snapshot.forEach((d) => {
+      items.push(d.data() as FinanceLead);
+    });
+    MOCK_FINANCE_LEADS.splice(0, MOCK_FINANCE_LEADS.length, ...items);
+  });
+}
 
 export class FinanceService {
   static getAllFinanceLeads(): FinanceLead[] {
@@ -101,7 +74,11 @@ export class FinanceService {
       ]
     };
 
+    // Optimistically update cache and write to Firestore
     MOCK_FINANCE_LEADS = [newLead, ...MOCK_FINANCE_LEADS];
+    setDoc(doc(db, "financeLeads", leadId), newLead).catch(err => {
+      console.error("Firestore error creating finance lead:", err);
+    });
 
     // Analytics: FINANCE_APPLICATION_STARTED
     trackEvent({
@@ -145,6 +122,20 @@ export class FinanceService {
       timestamp: now,
       operator: 'SYSTEM',
       notes: `Income details submitted. Requiring document uploads.`
+    });
+
+    // Write change to Firestore in background
+    updateDoc(doc(db, "financeLeads", leadId), {
+      monthlyIncome: lead.monthlyIncome,
+      employerName: lead.employerName,
+      employmentType: lead.employmentType,
+      loanAmountRequested: lead.loanAmountRequested,
+      loanTenureYears: lead.loanTenureYears,
+      status: 'DOCUMENT_PENDING',
+      updatedAt: now,
+      timeline: lead.timeline
+    }).catch(err => {
+      console.error("Firestore error submitting finance details:", err);
     });
 
     // Analytics: FINANCE_APPLICATION_SUBMITTED
@@ -194,6 +185,16 @@ export class FinanceService {
       notes: `Document uploaded under category ${category}: ${fileName}`
     });
 
+    // Write changes to Firestore in background
+    updateDoc(doc(db, "financeLeads", leadId), {
+      documents: lead.documents,
+      status: 'UNDER_REVIEW',
+      updatedAt: now,
+      timeline: lead.timeline
+    }).catch(err => {
+      console.error("Firestore error uploading finance doc:", err);
+    });
+
     // Analytics: FINANCE_DOCUMENT_UPLOADED
     trackEvent({
       eventName: 'FINANCE_DOCUMENT_UPLOADED',
@@ -224,6 +225,15 @@ export class FinanceService {
         timestamp: now,
         operator: operatorName,
         notes
+      });
+
+      // Write changes to Firestore in background
+      updateDoc(doc(db, "financeLeads", leadId), {
+        status: lead.status,
+        updatedAt: now,
+        timeline: lead.timeline
+      }).catch(err => {
+        console.error("Firestore error updating finance status:", err);
       });
 
       // Analytics Triggers:
@@ -275,6 +285,15 @@ export class FinanceService {
       timestamp: now,
       operator: operatorName,
       notes: `Finance Lead assigned to officer ${managerId}.`
+    });
+
+    // Write change to Firestore in background
+    updateDoc(doc(db, "financeLeads", leadId), {
+      assignedManagerId: managerId,
+      updatedAt: now,
+      timeline: lead.timeline
+    }).catch(err => {
+      console.error("Firestore error assigning finance manager:", err);
     });
 
     return lead;

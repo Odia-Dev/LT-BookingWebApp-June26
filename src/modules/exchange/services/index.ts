@@ -1,37 +1,22 @@
 import { ExchangeLead, ExchangeStatus, VehicleExchangeDetails } from "../types";
 import { trackEvent } from "@/modules/analytics/services/analytics";
 import { validateExchangeStatusTransition } from "../validation";
+import { db } from "@/core/firebase";
+import { collection, doc, setDoc, updateDoc, onSnapshot } from "firebase/firestore";
 
-export let MOCK_EXCHANGE_LEADS: ExchangeLead[] = [
-  {
-    id: "EXC-01062026-000001",
-    exchangeLeadId: "EXC-01062026-000001",
-    bookingId: "LT-BAM-DIG-JUN26-000001",
-    customerId: "CUST-001",
-    customerName: "Sudhanshu Sekhar",
-    vehicleDetails: {
-      registrationNumber: "OD-02-AX-1234",
-      brand: "Hyundai",
-      model: "i20 Asta",
-      year: 2018,
-      kilometersDriven: 45000,
-      ownershipType: "First Owner"
-    },
-    photos: ["/uploads/vehicles/i20_front.jpg", "/uploads/vehicles/i20_back.jpg"],
-    status: "VALUATION_COMPLETED",
-    assignedOfficerId: "VAL-OFF-07",
-    valuationAmount: 420000,
-    offeredAmount: 400000,
-    createdAt: new Date(Date.now() - 72 * 3600 * 1000).toISOString(),
-    updatedAt: new Date(Date.now() - 24 * 3600 * 1000).toISOString(),
-    timeline: [
-      { action: "EXCHANGE_STARTED", timestamp: new Date(Date.now() - 72.1 * 3600 * 1000).toISOString(), operator: "SYSTEM" },
-      { action: "EXCHANGE_SUBMITTED", timestamp: new Date(Date.now() - 72 * 3600 * 1000).toISOString(), operator: "SYSTEM", notes: "Used i20 submitted for assessment." },
-      { action: "LEAD_ASSIGNED", timestamp: new Date(Date.now() - 48 * 3600 * 1000).toISOString(), operator: "MGR-BAM-01", notes: "Assigned to appraiser officer VAL-OFF-07." },
-      { action: "VALUATION_COMPLETED", timestamp: new Date(Date.now() - 24 * 3600 * 1000).toISOString(), operator: "VAL-OFF-07", notes: "Appraisal completed. Base valuation set at ₹4.2 Lakhs." }
-    ]
-  }
-];
+// Seeded local cache synchronized with Firestore in real-time
+export let MOCK_EXCHANGE_LEADS: ExchangeLead[] = [];
+
+// Real-time synchronization setup for Client runtime
+if (typeof window !== "undefined") {
+  onSnapshot(collection(db, "exchangeLeads"), (snapshot) => {
+    const items: ExchangeLead[] = [];
+    snapshot.forEach((d) => {
+      items.push(d.data() as ExchangeLead);
+    });
+    MOCK_EXCHANGE_LEADS.splice(0, MOCK_EXCHANGE_LEADS.length, ...items);
+  });
+}
 
 export class ExchangeService {
   static getAllExchangeLeads(): ExchangeLead[] {
@@ -84,7 +69,11 @@ export class ExchangeService {
       ]
     };
 
+    // Optimistically update cache and write to Firestore
     MOCK_EXCHANGE_LEADS = [newLead, ...MOCK_EXCHANGE_LEADS];
+    setDoc(doc(db, "exchangeLeads", leadId), newLead).catch(err => {
+      console.error("Firestore error starting exchange application:", err);
+    });
 
     // Trigger Analytics Event
     trackEvent({
@@ -117,6 +106,17 @@ export class ExchangeService {
       timestamp: now,
       operator: "SYSTEM",
       notes: `Vehicle specification submitted: ${details.brand} ${details.model} (${details.year}).`
+    });
+
+    // Write change to Firestore in background
+    updateDoc(doc(db, "exchangeLeads", leadId), {
+      vehicleDetails: lead.vehicleDetails,
+      photos: lead.photos,
+      status: "APPRAISAL_PENDING",
+      updatedAt: now,
+      timeline: lead.timeline
+    }).catch(err => {
+      console.error("Firestore error submitting exchange details:", err);
     });
 
     // Trigger Analytics Event
@@ -154,6 +154,18 @@ export class ExchangeService {
       notes: `Appraisal evaluation set at ₹${valuationAmount.toLocaleString('en-IN')}. Trade-in offer: ₹${offeredAmount.toLocaleString('en-IN')}.`
     });
 
+    // Write changes to Firestore in background
+    updateDoc(doc(db, "exchangeLeads", leadId), {
+      valuationAmount: lead.valuationAmount,
+      offeredAmount: lead.offeredAmount,
+      status: "VALUATION_COMPLETED",
+      assignedOfficerId: officerId,
+      updatedAt: now,
+      timeline: lead.timeline
+    }).catch(err => {
+      console.error("Firestore error updating valuation details:", err);
+    });
+
     // Trigger Analytics Event
     trackEvent({
       eventName: "EXCHANGE_VALUATION_COMPLETED",
@@ -185,6 +197,15 @@ export class ExchangeService {
       notes: `Trade-in quote of ₹${(lead.offeredAmount || 0).toLocaleString('en-IN')} officially shared with customer.`
     });
 
+    // Write change to Firestore in background
+    updateDoc(doc(db, "exchangeLeads", leadId), {
+      status: "OFFER_SHARED",
+      updatedAt: now,
+      timeline: lead.timeline
+    }).catch(err => {
+      console.error("Firestore error sharing exchange offer:", err);
+    });
+
     return lead;
   }
 
@@ -205,6 +226,15 @@ export class ExchangeService {
       timestamp: now,
       operator: "CUSTOMER",
       notes: notes || `Customer ${accept ? "accepted" : "rejected"} the trade-in offer.`
+    });
+
+    // Write change to Firestore in background
+    updateDoc(doc(db, "exchangeLeads", leadId), {
+      status: targetStatus,
+      updatedAt: now,
+      timeline: lead.timeline
+    }).catch(err => {
+      console.error("Firestore error accepting/rejecting offer:", err);
     });
 
     // Trigger Analytics Events
@@ -234,6 +264,15 @@ export class ExchangeService {
       notes: `Exchange lead assigned to appraisal evaluator ${officerId}.`
     });
 
+    // Write change to Firestore in background
+    updateDoc(doc(db, "exchangeLeads", leadId), {
+      assignedOfficerId: officerId,
+      updatedAt: now,
+      timeline: lead.timeline
+    }).catch(err => {
+      console.error("Firestore error assigning exchange officer:", err);
+    });
+
     return lead;
   }
 
@@ -254,6 +293,15 @@ export class ExchangeService {
       timestamp: now,
       operator: operatorName,
       notes
+    });
+
+    // Write change to Firestore in background
+    updateDoc(doc(db, "exchangeLeads", leadId), {
+      status,
+      updatedAt: now,
+      timeline: lead.timeline
+    }).catch(err => {
+      console.error("Firestore error updating exchange status:", err);
     });
 
     if (status === "COMPLETED") {

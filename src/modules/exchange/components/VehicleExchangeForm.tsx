@@ -1,7 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { validateExchangeInput } from '../validation';
 import { VehicleExchangeDetails } from '../types';
-import { ArrowRight, Car, Compass, Calendar, RefreshCw, AlertCircle } from 'lucide-react';
+import { ArrowRight, Car, Compass, Calendar, RefreshCw, AlertCircle, Upload, Loader2, X } from 'lucide-react';
+import { storage } from '@/core/firebase';
+import { ref, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
 
 interface VehicleExchangeFormProps {
   onSubmit: (details: VehicleExchangeDetails, photos: string[]) => void;
@@ -24,13 +26,39 @@ export const VehicleExchangeForm: React.FC<VehicleExchangeFormProps> = ({
   });
 
   const [photosList, setPhotosList] = useState<string[]>([]);
-  const [photoInput, setPhotoInput] = useState('');
+  const [uploading, setUploading] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const handleAddPhoto = () => {
-    if (!photoInput || photoInput.trim() === '') return;
-    setPhotosList([...photosList, photoInput.trim()]);
-    setPhotoInput('');
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files.length > 0) {
+      const file = e.target.files[0];
+      setUploading(true);
+      setErrorMsg('');
+
+      try {
+        const fileRef = ref(storage, `exchange/vehicles/${Date.now()}_${file.name}`);
+        const uploadTask = uploadBytesResumable(fileRef, file);
+        
+        await new Promise<void>((resolve, reject) => {
+          uploadTask.on(
+            'state_changed',
+            null,
+            (err) => reject(err),
+            () => resolve()
+          );
+        });
+
+        const downloadURL = await getDownloadURL(fileRef);
+        setPhotosList(prev => [...prev, downloadURL]);
+        if (fileInputRef.current) fileInputRef.current.value = '';
+      } catch (err) {
+        console.error("Storage upload failed:", err);
+        setErrorMsg('Failed to upload image to Firebase Storage.');
+      } finally {
+        setUploading(false);
+      }
+    }
   };
 
   const handleRemovePhoto = (idx: number) => {
@@ -153,24 +181,20 @@ export const VehicleExchangeForm: React.FC<VehicleExchangeFormProps> = ({
         </div>
       </div>
 
-      {/* Mock Photos Upload Section */}
+      {/* Real Photos Upload Section */}
       <div className="border-t border-gray-100 pt-4 flex flex-col gap-3">
-        <label className="text-xs font-bold text-gray-500">Add Vehicle Inspection Photos (Mock URL/File name)</label>
-        <div className="flex gap-2">
+        <label htmlFor="photoUpload" className="text-xs font-bold text-gray-500">Upload Used Vehicle Inspection Photos</label>
+        <div className="flex items-center gap-3">
           <input
-            type="text"
-            value={photoInput}
-            onChange={e => setPhotoInput(e.target.value)}
-            placeholder="e.g. front_view.jpg, dashboard.jpg"
+            id="photoUpload"
+            type="file"
+            ref={fileInputRef}
+            onChange={handleFileChange}
+            accept="image/*"
+            disabled={uploading}
             className="border border-gray-200 rounded-xl px-4 py-2 text-xs focus:outline-none focus:border-[#EB0A1E] flex-1"
           />
-          <button
-            type="button"
-            onClick={handleAddPhoto}
-            className="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl text-xs font-bold transition-all cursor-pointer"
-          >
-            Add
-          </button>
+          {uploading && <Loader2 className="h-5 w-5 animate-spin text-[#EB0A1E]" />}
         </div>
 
         {photosList.length > 0 && (
@@ -178,15 +202,15 @@ export const VehicleExchangeForm: React.FC<VehicleExchangeFormProps> = ({
             {photosList.map((p, idx) => (
               <span
                 key={idx}
-                className="text-[10px] bg-gray-100 text-gray-750 border border-gray-200 px-2.5 py-1 rounded-full font-semibold flex items-center gap-1.5"
+                className="text-[10px] bg-gray-100 text-gray-750 border border-gray-200 px-2.5 py-1 rounded-full font-semibold flex items-center gap-1.5 max-w-xs truncate"
               >
-                {p}
+                <span className="truncate flex-1">{p}</span>
                 <button
                   type="button"
                   onClick={() => handleRemovePhoto(idx)}
                   className="text-red-500 hover:text-red-700 font-extrabold shrink-0"
                 >
-                  ×
+                  <X className="h-3 w-3" />
                 </button>
               </span>
             ))}
@@ -196,6 +220,7 @@ export const VehicleExchangeForm: React.FC<VehicleExchangeFormProps> = ({
 
       <button
         type="submit"
+        disabled={uploading}
         className="w-full py-3.5 bg-gray-900 hover:bg-gray-800 text-white rounded-xl font-bold text-xs flex items-center justify-center gap-2 transition-all cursor-pointer mt-2"
       >
         Submit Exchange Eligibility <ArrowRight className="h-4 w-4" />

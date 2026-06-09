@@ -1,6 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { DocumentCategory } from '../types';
-import { Upload, FileText, CheckCircle2 } from 'lucide-react';
+import { Upload, FileText, CheckCircle2, Loader2 } from 'lucide-react';
+import { storage } from '@/core/firebase';
+import { ref, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
 
 interface FinanceDocumentUploaderProps {
   onUpload: (category: DocumentCategory, fileName: string, filePath: string) => void;
@@ -9,8 +11,10 @@ interface FinanceDocumentUploaderProps {
 
 export const FinanceDocumentUploader: React.FC<FinanceDocumentUploaderProps> = ({ onUpload, className = '' }) => {
   const [category, setCategory] = useState<DocumentCategory>('Identity Proof');
-  const [fileName, setFileName] = useState('');
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [uploading, setUploading] = useState(false);
   const [uploaded, setUploaded] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const categories: DocumentCategory[] = [
     'Identity Proof',
@@ -20,19 +24,48 @@ export const FinanceDocumentUploader: React.FC<FinanceDocumentUploaderProps> = (
     'Vehicle Documents'
   ];
 
-  const handleUploadSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!fileName || fileName.trim() === '') return;
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files.length > 0) {
+      setSelectedFile(e.target.files[0]);
+    }
+  };
 
-    // Simulate document upload path
-    const mockPath = `/uploads/docs/${fileName.toLowerCase().replace(/\s+/g, '_')}`;
-    onUpload(category, fileName, mockPath);
-    
-    setUploaded(true);
-    setTimeout(() => {
-      setUploaded(false);
-      setFileName('');
-    }, 2000);
+  const handleUploadSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedFile) return;
+
+    setUploading(true);
+    try {
+      const fileName = selectedFile.name;
+      const fileRef = ref(storage, `finance/docs/${Date.now()}_${fileName}`);
+      
+      const uploadTask = uploadBytesResumable(fileRef, selectedFile);
+      
+      await new Promise<void>((resolve, reject) => {
+        uploadTask.on(
+          'state_changed',
+          null,
+          (err) => reject(err),
+          () => resolve()
+        );
+      });
+
+      const downloadURL = await getDownloadURL(fileRef);
+      onUpload(category, fileName, downloadURL);
+      
+      setUploaded(true);
+      setSelectedFile(null);
+      if (fileInputRef.current) fileInputRef.current.value = '';
+      
+      setTimeout(() => {
+        setUploaded(false);
+      }, 2000);
+    } catch (err) {
+      console.error("Firebase Storage upload error:", err);
+      alert("Failed to upload document to Firebase Storage.");
+    } finally {
+      setUploading(false);
+    }
   };
 
   return (
@@ -52,28 +85,34 @@ export const FinanceDocumentUploader: React.FC<FinanceDocumentUploaderProps> = (
       </div>
 
       <div className="flex flex-col gap-1.5">
-        <label htmlFor="fileName" className="text-xs font-bold text-gray-500">File Name to Upload (Mock)</label>
+        <label htmlFor="fileUpload" className="text-xs font-bold text-gray-500">Select Document File</label>
         <input
-          id="fileName"
-          type="text"
+          id="fileUpload"
+          type="file"
+          ref={fileInputRef}
           required
-          value={fileName}
-          onChange={e => setFileName(e.target.value)}
-          placeholder="e.g. payslip_june.pdf or aadhaar.jpg"
+          onChange={handleFileChange}
+          accept=".pdf,.jpg,.jpeg,.png"
           className="border border-gray-200 rounded-xl px-4 py-2.5 text-xs focus:outline-none focus:border-[#EB0A1E]"
         />
       </div>
 
       <button
         type="submit"
-        disabled={uploaded}
+        disabled={uploading || uploaded}
         className={`w-full py-3 rounded-xl font-bold text-xs flex items-center justify-center gap-2 transition-all cursor-pointer ${
           uploaded 
             ? 'bg-emerald-600 text-white' 
+            : uploading
+            ? 'bg-gray-400 text-white cursor-not-allowed'
             : 'bg-[#EB0A1E] hover:bg-[#c90818] text-white shadow-md shadow-[#EB0A1E]/10'
         }`}
       >
-        {uploaded ? (
+        {uploading ? (
+          <>
+            <Loader2 className="h-4 w-4 animate-spin" /> Uploading to Storage...
+          </>
+        ) : uploaded ? (
           <>
             <CheckCircle2 className="h-4 w-4" /> Document Uploaded!
           </>

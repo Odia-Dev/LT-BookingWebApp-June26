@@ -1,77 +1,21 @@
 import { Booking, BookingStatus, BookingTimelineEvent } from '../types';
 import { trackEvent } from '../../analytics/services/analytics';
+import { db } from "@/core/firebase";
+import { collection, doc, setDoc, updateDoc, onSnapshot } from "firebase/firestore";
 
-// Seeded booking records representing distinct lifecycle stages
-export let MOCK_BOOKINGS: Booking[] = [
-  {
-    bookingId: 'LT-BAM-DIG-JUN26-000001',
-    customerId: 'CUST-001',
-    customerName: 'Sudhanshu Sekhar',
-    phone: '9437011223',
-    email: 'customer@laxmitoyota.com',
-    vehicleId: 'hyryder',
-    vehicleName: 'Toyota Hyryder',
-    variant: 'Hybrid V',
-    color: 'Cafe White',
-    branchCode: 'BAM',
-    sourceCode: 'DIG',
-    status: 'BOOKING_CONFIRMED',
-    financeIntent: true,
-    exchangeIntent: false,
-    createdAt: new Date(Date.now() - 48 * 3600 * 1000).toISOString(), // 2 days ago
-    updatedAt: new Date(Date.now() - 47 * 3600 * 1000).toISOString(),
-    timeline: [
-      { action: 'BOOKING_STARTED', timestamp: new Date(Date.now() - 48 * 3600 * 1000).toISOString(), operator: 'SYSTEM', notes: 'Checkout started.' },
-      { action: 'BOOKING_CREATED', timestamp: new Date(Date.now() - 47.9 * 3600 * 1000).toISOString(), operator: 'SYSTEM', notes: 'Lead qualification complete.' },
-      { action: 'BOOKING_CONFIRMED', timestamp: new Date(Date.now() - 47 * 3600 * 1000).toISOString(), operator: 'RAZORPAY_GATEWAY', notes: 'Payment token received. Booking confirmed.' }
-    ]
-  },
-  {
-    bookingId: 'LT-JEY-WA-JUN26-000002',
-    customerId: 'CUST-001',
-    customerName: 'Sudhanshu Sekhar',
-    phone: '9437011223',
-    email: 'customer@laxmitoyota.com',
-    vehicleId: 'fortuner',
-    vehicleName: 'Toyota Fortuner',
-    variant: 'Legender',
-    color: 'Attitude Black',
-    branchCode: 'JEY',
-    sourceCode: 'WA',
-    status: 'DELIVERED',
-    financeIntent: false,
-    exchangeIntent: true,
-    createdAt: new Date(Date.now() - 10 * 24 * 3600 * 1000).toISOString(), // 10 days ago
-    updatedAt: new Date(Date.now() - 2 * 24 * 3600 * 1000).toISOString(),
-    timeline: [
-      { action: 'BOOKING_STARTED', timestamp: new Date(Date.now() - 10 * 24 * 3600 * 1000).toISOString(), operator: 'SYSTEM' },
-      { action: 'BOOKING_CREATED', timestamp: new Date(Date.now() - 10 * 24 * 3600 * 1000).toISOString(), operator: 'SYSTEM' },
-      { action: 'BOOKING_CONFIRMED', timestamp: new Date(Date.now() - 9.8 * 24 * 3600 * 1000).toISOString(), operator: 'RAZORPAY_GATEWAY' },
-      { action: 'DELIVERED', timestamp: new Date(Date.now() - 2 * 24 * 3600 * 1000).toISOString(), operator: 'Ranjan Senapati', notes: 'Keys handed over to customer.' }
-    ]
-  },
-  {
-    bookingId: 'LT-RAY-ADS-JUN26-000003',
-    customerId: 'CUST-002',
-    customerName: 'Priyalata Mishra',
-    phone: '9861054321',
-    email: 'priya.mishra@yahoo.com',
-    vehicleId: 'glanza',
-    vehicleName: 'Toyota Glanza',
-    variant: 'V',
-    color: 'Sportin Red',
-    branchCode: 'RAY',
-    sourceCode: 'ADS',
-    status: 'INITIATED',
-    financeIntent: true,
-    exchangeIntent: true,
-    createdAt: new Date(Date.now() - 1 * 3600 * 1000).toISOString(), // 1 hour ago
-    updatedAt: new Date(Date.now() - 1 * 3600 * 1000).toISOString(),
-    timeline: [
-      { action: 'BOOKING_STARTED', timestamp: new Date(Date.now() - 1 * 3600 * 1000).toISOString(), operator: 'SYSTEM', notes: 'Booking checkout initialized.' }
-    ]
-  }
-];
+// Seeded local cache synchronized with Firestore in real-time
+export let MOCK_BOOKINGS: Booking[] = [];
+
+// Real-time synchronization setup for Client runtime
+if (typeof window !== "undefined") {
+  onSnapshot(collection(db, "bookings"), (snapshot) => {
+    const items: Booking[] = [];
+    snapshot.forEach((d) => {
+      items.push(d.data() as Booking);
+    });
+    MOCK_BOOKINGS.splice(0, MOCK_BOOKINGS.length, ...items);
+  });
+}
 
 export class BookingsService {
   static getAllBookings(): Booking[] {
@@ -141,7 +85,11 @@ export class BookingsService {
       ]
     };
 
+    // Optimistically update cache and write to Firestore
     MOCK_BOOKINGS = [newBooking, ...MOCK_BOOKINGS];
+    setDoc(doc(db, "bookings", bookingId), newBooking).catch(err => {
+      console.error("Firestore error creating booking:", err);
+    });
 
     // Analytics: BOOKING_CREATED
     trackEvent({
@@ -157,7 +105,7 @@ export class BookingsService {
       updatedAt: now
     });
 
-    // If booking was directly confirmed on creation (e.g. mock successful payment flow)
+    // If booking was directly confirmed on creation (e.g. successful payment flow)
     if (newBooking.status === 'BOOKING_CONFIRMED') {
       trackEvent({
         eventName: 'BOOKING_CONFIRMED',
@@ -189,6 +137,15 @@ export class BookingsService {
       timestamp: booking.updatedAt,
       operator,
       notes
+    });
+
+    // Write change to Firestore in background
+    updateDoc(doc(db, "bookings", id), {
+      status: booking.status,
+      updatedAt: booking.updatedAt,
+      timeline: booking.timeline
+    }).catch(err => {
+      console.error("Firestore error updating booking status:", err);
     });
 
     // Analytics Trigger for status updates:

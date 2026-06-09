@@ -1,49 +1,22 @@
 import { Payment, PaymentStatus, PaymentType } from '../types';
 import { trackEvent } from '@/modules/analytics/services/analytics';
 import { validatePaymentStatusTransition } from '../validation';
+import { db } from "@/core/firebase";
+import { collection, doc, setDoc, updateDoc, onSnapshot } from "firebase/firestore";
 
-export let MOCK_PAYMENTS: Payment[] = [
-  {
-    id: 'PAY-26062026-000001',
-    paymentId: 'PAY-26062026-000001',
-    bookingId: 'LT-BAM-DIG-JUN26-000001',
-    customerId: 'CUST-001',
-    customerName: 'Sudhanshu Sekhar',
-    amount: 25000,
-    type: 'Booking Deposit',
-    status: 'SUCCESS',
-    gateway: 'Razorpay',
-    gatewayOrderId: 'order_BAM123456',
-    gatewayPaymentId: 'pay_BAM789012',
-    gatewaySignature: 'sig_BAM345678',
-    createdAt: new Date(Date.now() - 47 * 3600 * 1000).toISOString(),
-    updatedAt: new Date(Date.now() - 47 * 3600 * 1000).toISOString(),
-    timeline: [
-      { action: 'PAYMENT_INITIATED', timestamp: new Date(Date.now() - 47.1 * 3600 * 1000).toISOString(), operator: 'SYSTEM', notes: 'Order order_BAM123456 created.' },
-      { action: 'PAYMENT_SUCCESS', timestamp: new Date(Date.now() - 47 * 3600 * 1000).toISOString(), operator: 'RAZORPAY_GATEWAY', notes: 'Signature verified.' }
-    ]
-  },
-  {
-    id: 'PAY-26062026-000002',
-    paymentId: 'PAY-26062026-000002',
-    bookingId: 'LT-JEY-WA-JUN26-000002',
-    customerId: 'CUST-001',
-    customerName: 'Sudhanshu Sekhar',
-    amount: 25000,
-    type: 'Booking Deposit',
-    status: 'SUCCESS',
-    gateway: 'Razorpay',
-    gatewayOrderId: 'order_JEY123456',
-    gatewayPaymentId: 'pay_JEY789012',
-    gatewaySignature: 'sig_JEY345678',
-    createdAt: new Date(Date.now() - 9.8 * 24 * 3600 * 1000).toISOString(),
-    updatedAt: new Date(Date.now() - 9.8 * 24 * 3600 * 1000).toISOString(),
-    timeline: [
-      { action: 'PAYMENT_INITIATED', timestamp: new Date(Date.now() - 9.9 * 24 * 3600 * 1000).toISOString(), operator: 'SYSTEM' },
-      { action: 'PAYMENT_SUCCESS', timestamp: new Date(Date.now() - 9.8 * 24 * 3600 * 1000).toISOString(), operator: 'RAZORPAY_GATEWAY' }
-    ]
-  }
-];
+// Seeded local cache synchronized with Firestore in real-time
+export let MOCK_PAYMENTS: Payment[] = [];
+
+// Real-time synchronization setup for Client runtime
+if (typeof window !== "undefined") {
+  onSnapshot(collection(db, "payments"), (snapshot) => {
+    const items: Payment[] = [];
+    snapshot.forEach((d) => {
+      items.push(d.data() as Payment);
+    });
+    MOCK_PAYMENTS.splice(0, MOCK_PAYMENTS.length, ...items);
+  });
+}
 
 export class PaymentsService {
   static getAllPayments(): Payment[] {
@@ -100,7 +73,11 @@ export class PaymentsService {
       ]
     };
 
+    // Optimistically update cache and write to Firestore
     MOCK_PAYMENTS = [newPayment, ...MOCK_PAYMENTS];
+    setDoc(doc(db, "payments", paymentId), newPayment).catch(err => {
+      console.error("Firestore error creating payment:", err);
+    });
 
     // Analytics: PAYMENT_INITIATED
     trackEvent({
@@ -145,6 +122,17 @@ export class PaymentsService {
           notes: `Signature verified. Payment successful.`
         });
 
+        // Write status to Firestore in background
+        updateDoc(doc(db, "payments", paymentId), {
+          status: 'SUCCESS',
+          gatewayPaymentId,
+          gatewaySignature,
+          updatedAt: now,
+          timeline: payment.timeline
+        }).catch(err => {
+          console.error("Firestore error updating payment success:", err);
+        });
+
         // Analytics: PAYMENT_SUCCESS
         trackEvent({
           eventName: 'PAYMENT_SUCCESS',
@@ -164,6 +152,15 @@ export class PaymentsService {
           timestamp: now,
           operator: 'RAZORPAY_GATEWAY',
           notes: `Signature mismatch verification error.`
+        });
+
+        // Write status to Firestore in background
+        updateDoc(doc(db, "payments", paymentId), {
+          status: 'FAILED',
+          updatedAt: now,
+          timeline: payment.timeline
+        }).catch(err => {
+          console.error("Firestore error updating payment fail:", err);
         });
 
         // Analytics: PAYMENT_FAILED
@@ -207,6 +204,16 @@ export class PaymentsService {
         timestamp: now,
         operator: operatorName,
         notes: payment.refundNotes
+      });
+
+      // Write change to Firestore in background
+      updateDoc(doc(db, "payments", paymentId), {
+        status: 'REFUNDED',
+        refundNotes: payment.refundNotes,
+        updatedAt: now,
+        timeline: payment.timeline
+      }).catch(err => {
+        console.error("Firestore error updating payment refund:", err);
       });
 
       // Analytics: PAYMENT_REFUNDED
