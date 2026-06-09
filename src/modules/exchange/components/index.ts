@@ -1,2 +1,2 @@
-// Components index
-export {};
+export { VehicleExchangeForm } from "./VehicleExchangeForm";
+export { ExchangeDashboard } from "./ExchangeDashboard";

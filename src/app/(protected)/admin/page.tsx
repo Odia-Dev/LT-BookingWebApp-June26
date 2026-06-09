@@ -22,6 +22,7 @@ import LeadQueueDashboard from './leads/LeadQueueDashboard';
 import BookingsManagementDashboard from './bookings/BookingsManagementDashboard';
 import { PaymentsDashboard } from '@/modules/payments/components';
 import { FinanceDashboard } from '@/modules/finance';
+import { ExchangeDashboard } from '@/modules/exchange';
 
 export default function AdminDashboardPage() {
   const { user, logout, loading } = useAuth();
@@ -205,11 +206,7 @@ export default function AdminDashboardPage() {
             {activeTab === 'exchange' && (
               <div className="flex flex-col gap-6">
                 <h3 className="text-xl font-extrabold text-gray-900 border-b border-gray-100 pb-3">Exchange Valuation Desk</h3>
-                <div className="flex flex-col items-center justify-center py-12 text-center bg-gray-50 border border-dashed border-gray-250 rounded-2xl p-6">
-                  <ShieldCheck className="h-10 w-10 text-gray-400 mb-3" />
-                  <h4 className="font-bold text-gray-800">Exchange Appraisals Stub</h4>
-                  <p className="text-xs text-gray-500 max-w-xs mt-1">Appraisal desk for multi-brand pre-owned vehicles. Upload evaluations and confirm trade-in quotes.</p>
-                </div>
+                <ExchangeDashboard />
               </div>
             )}
 

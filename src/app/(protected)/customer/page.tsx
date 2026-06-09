@@ -12,6 +12,7 @@ import { BookingCard, BookingDetailsPanel } from '@/modules/bookings/components'
 import { usePayments } from '@/modules/payments/hooks';
 import { PaymentHistoryList } from '@/modules/payments/components';
 import { useFinance, FinanceApplicationForm, FinanceDocumentUploader } from '@/modules/finance';
+import { useExchange, VehicleExchangeForm } from '@/modules/exchange';
 import { 
   Car, 
   CreditCard, 
@@ -27,6 +28,8 @@ import {
   Calendar,
   Building,
   CheckCircle2,
+  CheckCircle,
+  XCircle,
   Clock,
   ChevronRight,
   ClipboardList
@@ -49,8 +52,10 @@ export default function CustomerDashboardPage() {
   const { bookings, cancelBooking } = useBookings('CUST-001');
   const { payments } = usePayments('CUST-001');
   const { financeLeads, startFinanceApplication, submitFinanceDetails, uploadFinanceDocument } = useFinance('CUST-001');
+  const { exchangeLeads, startExchangeApplication, submitExchangeDetails, acceptOrRejectOffer, updateStatus } = useExchange('CUST-001');
   const [selectedBookingId, setSelectedBookingId] = useState<string | null>(null);
   const [selectedBookingIdForFinance, setSelectedBookingIdForFinance] = useState<string>('');
+  const [selectedBookingIdForExchange, setSelectedBookingIdForExchange] = useState<string>('');
 
   useEffect(() => {
     if (bookings.length > 0 && !selectedBookingId) {
@@ -59,7 +64,10 @@ export default function CustomerDashboardPage() {
     if (bookings.length > 0 && !selectedBookingIdForFinance) {
       setSelectedBookingIdForFinance(bookings[0].bookingId);
     }
-  }, [bookings, selectedBookingId, selectedBookingIdForFinance]);
+    if (bookings.length > 0 && !selectedBookingIdForExchange) {
+      setSelectedBookingIdForExchange(bookings[0].bookingId);
+    }
+  }, [bookings, selectedBookingId, selectedBookingIdForFinance, selectedBookingIdForExchange]);
 
   if (loading) {
     return (
@@ -460,23 +468,212 @@ export default function CustomerDashboardPage() {
               <div className="flex flex-col gap-6">
                 <h3 className="text-xl font-extrabold text-gray-900 border-b border-gray-100 pb-3">My Exchange Leads</h3>
                 
-                {bookings.filter(b => b.exchangeIntent).length === 0 ? (
-                  <div className="flex flex-col items-center justify-center py-12 text-center bg-gray-50 border border-dashed border-gray-250 rounded-2xl p-6">
-                    <RefreshCw className="h-10 w-10 text-gray-400 mb-3" />
-                    <h4 className="font-bold text-gray-800">No Exchange Valuations</h4>
-                    <p className="text-xs text-gray-500 max-w-xs mt-1">Your old vehicle exchange appraisals and evaluation statuses will appear here.</p>
+                {exchangeLeads.length === 0 ? (
+                  <div className="flex flex-col gap-6 text-left">
+                    {bookings.length === 0 ? (
+                      <div className="flex flex-col items-center justify-center py-12 text-center bg-gray-50 border border-dashed border-gray-250 rounded-2xl p-6">
+                        <RefreshCw className="h-10 w-10 text-gray-400 mb-3" />
+                        <h4 className="font-bold text-gray-800">No Bookings Found</h4>
+                        <p className="text-xs text-gray-500 max-w-xs mt-1">You must book a vehicle before initiating a used car appraisal trade-in request.</p>
+                      </div>
+                    ) : (
+                      <div className="flex flex-col gap-4">
+                        <div className="p-5 border border-gray-150 rounded-2xl bg-gray-50 flex flex-col gap-3">
+                          <h4 className="font-bold text-sm text-gray-850">Initiate Old Car Exchange Valuation</h4>
+                          <p className="text-xs text-gray-500">Select which of your active bookings this vehicle exchange trade-in is associated with.</p>
+                          <div className="flex flex-col gap-1 max-w-xs mt-2">
+                            <span className="text-[10px] uppercase font-bold text-gray-450">Active Booking Reference</span>
+                            <select
+                              value={selectedBookingIdForExchange}
+                              onChange={(e) => setSelectedBookingIdForExchange(e.target.value)}
+                              className="border border-gray-200 rounded-lg p-2.5 text-xs focus:outline-none focus:border-[#EB0A1E] bg-white font-semibold text-gray-750"
+                            >
+                              {bookings.map(b => (
+                                <option key={b.bookingId} value={b.bookingId}>
+                                  {b.vehicleName} ({b.bookingId})
+                                </option>
+                              ))}
+                            </select>
+                          </div>
+                        </div>
+
+                        <VehicleExchangeForm
+                          onSubmit={(details, photos) => {
+                            if (!selectedBookingIdForExchange) return;
+                            const lead = startExchangeApplication(
+                              selectedBookingIdForExchange,
+                              'CUST-001',
+                              currentUser.displayName
+                            );
+                            submitExchangeDetails(lead.exchangeLeadId, details, photos);
+                          }}
+                        />
+                      </div>
+                    )}
                   </div>
                 ) : (
-                  <div className="space-y-4">
-                    {bookings.filter(b => b.exchangeIntent).map(b => (
-                      <div key={b.bookingId} className="p-5 border border-gray-200 rounded-2xl flex justify-between items-center">
-                        <div>
-                          <span className="font-bold text-xs text-gray-800">{b.vehicleName} Appraisal Review</span>
-                          <p className="text-[10px] text-gray-400">Status: Assigned to Exchange Coordinator</p>
+                  <div className="flex flex-col gap-6 text-left">
+                    {exchangeLeads.map(lead => {
+                      const associatedBooking = bookings.find(b => b.bookingId === lead.bookingId);
+                      const showQuote = ['OFFER_SHARED', 'OFFER_ACCEPTED', 'OFFER_REJECTED', 'COMPLETED'].includes(lead.status);
+
+                      return (
+                        <div key={lead.exchangeLeadId} className="border border-gray-150 rounded-3xl p-6 flex flex-col gap-6 bg-white shadow-sm">
+                          {/* Header */}
+                          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-gray-100 pb-4">
+                            <div>
+                              <div className="flex items-center gap-2 flex-wrap">
+                                <span className="font-extrabold text-base text-gray-900">
+                                  {lead.vehicleDetails.brand} {lead.vehicleDetails.model}
+                                </span>
+                                <span className="text-[10px] font-mono bg-gray-100 text-gray-650 px-2 py-0.5 rounded">
+                                  {lead.exchangeLeadId}
+                                </span>
+                              </div>
+                              <p className="text-[10px] text-gray-455 mt-1">
+                                Applied Booking: <span className="font-mono font-bold text-gray-700">{associatedBooking?.vehicleName || lead.bookingId}</span>
+                              </p>
+                            </div>
+                            <span className={`text-[10px] font-extrabold px-3 py-1 rounded-full border uppercase ${
+                              ['OFFER_ACCEPTED', 'COMPLETED'].includes(lead.status)
+                                ? 'text-emerald-700 bg-emerald-50 border-emerald-200'
+                                : lead.status === 'OFFER_REJECTED'
+                                ? 'text-red-700 bg-red-50 border-red-200'
+                                : 'text-blue-700 bg-blue-50 border-blue-200'
+                            }`}>
+                              {lead.status}
+                            </span>
+                          </div>
+
+                          {/* Specifications Summary */}
+                          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-xs bg-gray-50/50 p-4 rounded-2xl border border-gray-100">
+                            <div>
+                              <span className="text-[9px] text-gray-400 uppercase font-bold block mb-0.5">Registration Number</span>
+                              <span className="font-extrabold text-gray-800">{lead.vehicleDetails.registrationNumber}</span>
+                            </div>
+                            <div>
+                              <span className="text-[9px] text-gray-400 uppercase font-bold block mb-0.5">Manufacturing Year</span>
+                              <span className="font-bold text-gray-800">{lead.vehicleDetails.year}</span>
+                            </div>
+                            <div>
+                              <span className="text-[9px] text-gray-400 uppercase font-bold block mb-0.5">Kilometers Driven</span>
+                              <span className="font-bold text-gray-800">{lead.vehicleDetails.kilometersDriven.toLocaleString('en-IN')} Kms</span>
+                            </div>
+                            <div>
+                              <span className="text-[9px] text-gray-400 uppercase font-bold block mb-0.5">Ownership</span>
+                              <span className="font-bold text-gray-850">{lead.vehicleDetails.ownershipType}</span>
+                            </div>
+                          </div>
+
+                          {/* Milestones Stepper */}
+                          <div className="flex flex-col gap-2">
+                            <span className="text-xs font-bold text-gray-400 uppercase tracking-wider">Appraisal Milestone Status</span>
+                            <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 text-center text-[10px]">
+                              {[
+                                { status: 'INITIATED', label: '1. Initiated' },
+                                { status: 'APPRAISAL_PENDING', label: '2. Inspection Pending' },
+                                { status: 'UNDER_REVIEW', label: '3. Valuation Review' },
+                                { status: 'OFFER_SHARED', label: '4. Offer Shared' },
+                                { status: 'COMPLETED', label: '5. Completed' }
+                              ].map((step) => {
+                                const statuses = ['INITIATED', 'APPRAISAL_PENDING', 'UNDER_REVIEW', 'VALUATION_COMPLETED', 'OFFER_SHARED', 'OFFER_ACCEPTED', 'OFFER_REJECTED', 'COMPLETED'];
+                                const currentIdx = statuses.indexOf(lead.status);
+                                const stepIdx = statuses.indexOf(step.status);
+                                
+                                // Specific logic for Offer Rejected/Accepted terminal cases mapping to Step 5
+                                const isCompleted = step.status === 'COMPLETED'
+                                  ? ['OFFER_ACCEPTED', 'OFFER_REJECTED', 'COMPLETED'].includes(lead.status)
+                                  : stepIdx <= currentIdx;
+                                const isCurrent = step.status === lead.status || (step.status === 'COMPLETED' && ['OFFER_ACCEPTED', 'OFFER_REJECTED'].includes(lead.status));
+
+                                return (
+                                  <div
+                                    key={step.status}
+                                    className={`p-2.5 rounded-xl border font-bold transition-all ${
+                                      isCurrent
+                                        ? 'bg-[#EB0A1E] text-white border-[#EB0A1E]'
+                                        : isCompleted
+                                        ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                                        : 'bg-gray-55 text-gray-400 border-gray-150'
+                                    }`}
+                                  >
+                                    {step.label}
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          </div>
+
+                          {/* Quote and Decision Panel */}
+                          {showQuote && (
+                            <div className="p-5 border border-gray-200 bg-gray-50/50 rounded-2xl flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                              <div>
+                                <span className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">Evaluation Quote Offer</span>
+                                <h4 className="text-2xl font-extrabold text-emerald-600 mt-1">₹{(lead.offeredAmount || 0).toLocaleString('en-IN')}</h4>
+                                <p className="text-[10px] text-gray-500 mt-0.5">This offer is valid for 7 days subject to final physical inspection check.</p>
+                              </div>
+
+                              {lead.status === 'OFFER_SHARED' && (
+                                <div className="flex gap-2 w-full sm:w-auto shrink-0">
+                                  <button
+                                    onClick={() => acceptOrRejectOffer(lead.exchangeLeadId, false)}
+                                    className="px-4 py-2.5 border border-red-200 hover:bg-red-50 text-red-650 rounded-xl text-xs font-bold transition-all cursor-pointer flex-1 sm:flex-none"
+                                  >
+                                    Decline Offer
+                                  </button>
+                                  <button
+                                    onClick={() => {
+                                      acceptOrRejectOffer(lead.exchangeLeadId, true);
+                                      updateStatus(lead.exchangeLeadId, 'COMPLETED', 'CUSTOMER', 'Offer approved by customer.');
+                                    }}
+                                    className="px-5 py-2.5 bg-gray-900 hover:bg-gray-800 text-white rounded-xl text-xs font-bold transition-all cursor-pointer flex-1 sm:flex-none"
+                                  >
+                                    Accept Trade-In
+                                  </button>
+                                </div>
+                              )}
+
+                              {lead.status === 'OFFER_ACCEPTED' && (
+                                <span className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-emerald-50 border border-emerald-200 text-emerald-700 rounded-xl text-xs font-bold">
+                                  <CheckCircle className="h-4 w-4" /> Offer Accepted
+                                </span>
+                              )}
+
+                              {lead.status === 'OFFER_REJECTED' && (
+                                <span className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-red-50 border border-red-200 text-red-700 rounded-xl text-xs font-bold">
+                                  <XCircle className="h-4 w-4" /> Offer Declined
+                                </span>
+                              )}
+
+                              {lead.status === 'COMPLETED' && (
+                                <span className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-emerald-100 border border-emerald-300 text-emerald-800 rounded-xl text-xs font-bold">
+                                  <CheckCircle className="h-4 w-4" /> Exchange Agreement Finalized
+                                </span>
+                              )}
+                            </div>
+                          )}
+
+                          {/* Activity history logs */}
+                          <div className="border-t border-gray-100 pt-4 flex flex-col gap-3">
+                            <span className="text-xs font-bold text-gray-400 uppercase tracking-wider">Evaluation Audit Logs</span>
+                            <div className="border-l-2 border-gray-150 pl-4 ml-1.5 space-y-3 text-[11px]">
+                              {lead.timeline.map((item, idx) => (
+                                <div key={idx} className="relative">
+                                  <div className="absolute -left-[21px] top-1 w-2 h-2 rounded-full bg-white border border-[#EB0A1E]" />
+                                  <div className="flex justify-between items-center font-bold text-gray-700">
+                                    <span>{item.action}</span>
+                                    <span className="font-normal text-gray-455">{new Date(item.timestamp).toLocaleString()}</span>
+                                  </div>
+                                  <p className="text-[10px] text-gray-455 mt-0.5">Operator: {item.operator}</p>
+                                  {item.notes && <p className="text-[10px] text-gray-550 italic bg-gray-50/50 p-1.5 rounded mt-0.5">"{item.notes}"</p>}
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+
                         </div>
-                        <span className="text-xs bg-blue-50 text-blue-500 font-bold px-2 py-0.5 rounded">Inspection Pending</span>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 )}
               </div>
