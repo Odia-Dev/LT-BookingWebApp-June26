@@ -23,6 +23,7 @@ import BookingsManagementDashboard from './bookings/BookingsManagementDashboard'
 import { PaymentsDashboard } from '@/modules/payments/components';
 import { FinanceDashboard } from '@/modules/finance';
 import { ExchangeDashboard } from '@/modules/exchange';
+import { AnalyticsOverview, BranchPerformance, CustomerDirectory } from '@/modules/crm';
 
 export default function AdminDashboardPage() {
   const { user, logout, loading } = useAuth();
@@ -121,22 +122,15 @@ export default function AdminDashboardPage() {
           <main className="lg:col-span-3 bg-white p-8 border border-gray-150 rounded-3xl shadow-sm text-left min-h-[450px]">
             {activeTab === 'overview' && (
               <div className="flex flex-col gap-6">
-                <h3 className="text-xl font-extrabold text-gray-900 border-b border-gray-100 pb-3">Operational Stats</h3>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                  {stats.map(s => (
-                    <div key={s.label} className="p-5 border border-gray-150 rounded-2xl bg-gray-50 flex flex-col gap-2 shadow-sm">
-                      <span className="text-[10px] text-gray-400 font-bold uppercase leading-snug">{s.label}</span>
-                      <span className="text-3xl font-extrabold text-gray-800">{s.value}</span>
-                    </div>
-                  ))}
-                </div>
-
-                <div className="mt-4 p-6 bg-gray-50 border border-gray-150 rounded-2xl flex flex-col gap-2">
-                  <h4 className="font-bold text-gray-800 text-sm">Active Branch Code: {currentUser.role === 'SUPER_ADMIN' ? 'ALL' : 'BAM / JEY'}</h4>
-                  <p className="text-xs text-gray-500 leading-relaxed">
-                    Under standard SLA parameters, new leads must be assigned within 1 hour. All finance proposals requiring document validation must undergo secondary review.
-                  </p>
-                </div>
+                <h3 className="text-xl font-extrabold text-gray-900 border-b border-gray-100 pb-3">Operational Desk Overview</h3>
+                <AnalyticsOverview />
+                
+                {['SUPER_ADMIN', 'BRANCH_MANAGER'].includes(currentUser.role) && (
+                  <div className="mt-4 flex flex-col gap-4">
+                    <h3 className="text-lg font-extrabold text-gray-900 border-b border-gray-100 pb-2">Branch Operational Share</h3>
+                    <BranchPerformance />
+                  </div>
+                )}
               </div>
             )}
 
@@ -188,11 +182,7 @@ export default function AdminDashboardPage() {
             {activeTab === 'customers' && (
               <div className="flex flex-col gap-6">
                 <h3 className="text-xl font-extrabold text-gray-900 border-b border-gray-100 pb-3">Customer Directory</h3>
-                <div className="flex flex-col items-center justify-center py-12 text-center bg-gray-50 border border-dashed border-gray-250 rounded-2xl p-6">
-                  <Users className="h-10 w-10 text-gray-400 mb-3" />
-                  <h4 className="font-bold text-gray-800">Customer Records Stub</h4>
-                  <p className="text-xs text-gray-500 max-w-xs mt-1">Directory containing verified profiles, email validation checks, and accounts status modifiers.</p>
-                </div>
+                <CustomerDirectory />
               </div>
             )}
 
