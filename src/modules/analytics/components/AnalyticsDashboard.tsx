@@ -95,9 +95,9 @@ export const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({ userRole
   };
 
   return (
-    <div className="flex flex-col gap-6 text-left">
+    <div className="flex flex-col gap-6 text-left max-w-full overflow-hidden">
       {/* 1. Global Filter Panel */}
-      <div className="bg-white p-5 border border-gray-150 rounded-2xl shadow-sm flex flex-col gap-4">
+      <div className="bg-white p-4 sm:p-5 border border-gray-150 rounded-2xl shadow-sm flex flex-col gap-4 overflow-hidden max-w-full">
         <div className="flex items-center justify-between border-b border-gray-100 pb-3 flex-wrap gap-2">
           <span className="text-xs font-bold text-gray-400 uppercase tracking-wider flex items-center gap-1.5">
             <Target className="h-4 w-4 text-gray-400" /> Filter Desk Parameters
@@ -107,13 +107,13 @@ export const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({ userRole
           </span>
         </div>
 
-        <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 text-xs">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 text-xs">
           <div className="flex flex-col gap-1">
             <span className="font-bold text-gray-400">Date Range</span>
             <select
               value={filters.dateRange}
               onChange={e => setFilters({ ...filters, dateRange: e.target.value as DateRangeFilter })}
-              className="border border-gray-200 rounded-lg p-2.5 bg-white font-semibold text-gray-750 focus:outline-none focus:border-[#EB0A1E]"
+              className="border border-gray-200 rounded-lg p-2.5 bg-white font-semibold text-gray-750 focus:outline-none focus:border-[#EB0A1E] w-full"
             >
               <option value="TODAY">Today</option>
               <option value="THIS_WEEK">This Week</option>
@@ -127,7 +127,7 @@ export const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({ userRole
             <select
               value={filters.branchCode}
               onChange={e => setFilters({ ...filters, branchCode: e.target.value })}
-              className="border border-gray-200 rounded-lg p-2.5 bg-white font-semibold text-gray-750 focus:outline-none focus:border-[#EB0A1E]"
+              className="border border-gray-200 rounded-lg p-2.5 bg-white font-semibold text-gray-750 focus:outline-none focus:border-[#EB0A1E] w-full"
             >
               <option value="ALL">All Branches</option>
               <option value="BAM">Brahmapur H.O.</option>
@@ -141,7 +141,7 @@ export const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({ userRole
             <select
               value={filters.vehicleSlug}
               onChange={e => setFilters({ ...filters, vehicleSlug: e.target.value })}
-              className="border border-gray-200 rounded-lg p-2.5 bg-white font-semibold text-gray-750 focus:outline-none focus:border-[#EB0A1E]"
+              className="border border-gray-200 rounded-lg p-2.5 bg-white font-semibold text-gray-750 focus:outline-none focus:border-[#EB0A1E] w-full"
             >
               <option value="ALL">All Models</option>
               <option value="glanza">Toyota Glanza</option>
@@ -157,7 +157,7 @@ export const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({ userRole
             <select
               value={filters.leadSource}
               onChange={e => setFilters({ ...filters, leadSource: e.target.value })}
-              className="border border-gray-200 rounded-lg p-2.5 bg-white font-semibold text-gray-750 focus:outline-none focus:border-[#EB0A1E]"
+              className="border border-gray-200 rounded-lg p-2.5 bg-white font-semibold text-gray-750 focus:outline-none focus:border-[#EB0A1E] w-full"
             >
               <option value="ALL">All Sources</option>
               <option value="DIG">Digital Portal (DIG)</option>
@@ -171,7 +171,7 @@ export const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({ userRole
             <select
               value={filters.status}
               onChange={e => setFilters({ ...filters, status: e.target.value })}
-              className="border border-gray-200 rounded-lg p-2.5 bg-white font-semibold text-gray-750 focus:outline-none focus:border-[#EB0A1E]"
+              className="border border-gray-200 rounded-lg p-2.5 bg-white font-semibold text-gray-750 focus:outline-none focus:border-[#EB0A1E] w-full"
             >
               <option value="ALL">All Statuses</option>
               <option value="ACTIVE">Active Pipeline</option>
@@ -182,7 +182,7 @@ export const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({ userRole
       </div>
 
       {/* 2. Sub-Dashboard Profile Tabs */}
-      <div className="flex border border-gray-150 rounded-2xl p-1.5 bg-white shadow-sm overflow-x-auto gap-1">
+      <div className="flex border border-gray-150 rounded-2xl p-1.5 bg-white shadow-sm overflow-x-auto whitespace-nowrap scrollbar-thin gap-1 max-w-full">
         {[
           { id: 'EXECUTIVE', label: 'Executive' },
           { id: 'SALES', label: 'Sales Desk' },
@@ -199,7 +199,7 @@ export const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({ userRole
               key={profile.id}
               disabled={!isAllowed}
               onClick={() => setActiveProfile(profile.id as any)}
-              className={`px-4 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap flex items-center gap-1 ${
+              className={`px-4 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap flex items-center gap-1 shrink-0 ${
                 isAct
                   ? 'bg-gray-900 text-white shadow-md'
                   : isAllowed
@@ -215,53 +215,55 @@ export const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({ userRole
       </div>
 
       {/* 3. Metrics KPI Trend Cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-5">
-        <div className="bg-white p-5 border border-gray-150 rounded-2xl shadow-sm flex flex-col gap-1.5">
-          <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider flex items-center gap-1.5">
-            <Users className="h-4 w-4 text-blue-500" /> Lead volume
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5">
+        <div className="bg-white p-5 border border-gray-150 rounded-2xl shadow-sm flex flex-col gap-1.5 overflow-hidden min-w-0">
+          <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider flex items-center gap-1.5 truncate">
+            <Users className="h-4 w-4 text-blue-500 shrink-0" /> Lead volume
           </span>
-          <span className="text-2xl sm:text-3xl font-extrabold text-gray-900">{leadsCount}</span>
-          <span className="text-[10px] text-emerald-600 font-bold">+18.4% vs last period</span>
+          <span className="font-extrabold text-gray-900 truncate block" style={{ fontSize: 'clamp(1.25rem, 5vw, 1.875rem)', lineHeight: '1.2' }}>{leadsCount}</span>
+          <span className="text-[10px] text-emerald-600 font-bold truncate block">+18.4% vs last period</span>
         </div>
 
-        <div className="bg-white p-5 border border-gray-150 rounded-2xl shadow-sm flex flex-col gap-1.5">
-          <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider flex items-center gap-1.5">
-            <Car className="h-4 w-4 text-[#EB0A1E]" /> Booking conversion
+        <div className="bg-white p-5 border border-gray-150 rounded-2xl shadow-sm flex flex-col gap-1.5 overflow-hidden min-w-0">
+          <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider flex items-center gap-1.5 truncate">
+            <Car className="h-4 w-4 text-[#EB0A1E] shrink-0" /> Booking conversion
           </span>
-          <span className="text-2xl sm:text-3xl font-extrabold text-gray-900">{conversionRate}%</span>
-          <span className="text-[10px] text-emerald-600 font-bold">+1.2% benchmark standard</span>
+          <span className="font-extrabold text-gray-900 truncate block" style={{ fontSize: 'clamp(1.25rem, 5vw, 1.875rem)', lineHeight: '1.2' }}>{conversionRate}%</span>
+          <span className="text-[10px] text-emerald-600 font-bold truncate block">+1.2% benchmark</span>
         </div>
 
-        <div className="bg-white p-5 border border-gray-150 rounded-2xl shadow-sm flex flex-col gap-1.5">
-          <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider flex items-center gap-1.5">
-            <Percent className="h-4 w-4 text-emerald-500" /> Loan Approvals
+        <div className="bg-white p-5 border border-gray-150 rounded-2xl shadow-sm flex flex-col gap-1.5 overflow-hidden min-w-0">
+          <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider flex items-center gap-1.5 truncate">
+            <Percent className="h-4 w-4 text-emerald-500 shrink-0" /> Loan Approvals
           </span>
-          <span className="text-2xl sm:text-3xl font-extrabold text-gray-900">{financeRate}%</span>
-          <span className="text-[10px] text-emerald-600 font-bold">2.4 days average velocity</span>
+          <span className="font-extrabold text-gray-900 truncate block" style={{ fontSize: 'clamp(1.25rem, 5vw, 1.875rem)', lineHeight: '1.2' }}>{financeRate}%</span>
+          <span className="text-[10px] text-emerald-600 font-bold truncate block">2.4 days velocity</span>
         </div>
 
-        <div className="bg-white p-5 border border-gray-150 rounded-2xl shadow-sm flex flex-col gap-1.5">
-          <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider flex items-center gap-1.5">
-            <DollarSign className="h-4 w-4 text-amber-500" /> Revenue Total
+        <div className="bg-white p-5 border border-gray-150 rounded-2xl shadow-sm flex flex-col gap-1.5 overflow-hidden min-w-0">
+          <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider flex items-center gap-1.5 truncate">
+            <DollarSign className="h-4 w-4 text-amber-500 shrink-0" /> Revenue Total
           </span>
-          <span className="text-2xl sm:text-3xl font-extrabold text-gray-900">₹{(revenueTotal).toLocaleString('en-IN')}</span>
-          <span className="text-[10px] text-emerald-600 font-bold">On track for Q2 target</span>
+          <span className="font-extrabold text-gray-900 truncate block" title={`₹${revenueTotal.toLocaleString('en-IN')}`} style={{ fontSize: 'clamp(1.1rem, 4.5vw, 1.75rem)', lineHeight: '1.2' }}>
+            ₹{revenueTotal.toLocaleString('en-IN')}
+          </span>
+          <span className="text-[10px] text-emerald-600 font-bold truncate block">On track for target</span>
         </div>
       </div>
 
       {/* 4. Visualizations Row */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 max-w-full">
         
         {/* Line Chart / Trend chart (CSS flex) */}
-        <div className="lg:col-span-2 bg-white border border-gray-150 p-5 rounded-2xl shadow-sm flex flex-col gap-4">
+        <div className="lg:col-span-2 bg-white border border-gray-150 p-4 sm:p-5 rounded-2xl shadow-sm flex flex-col gap-4 overflow-hidden max-w-full">
           <span className="text-xs font-bold text-gray-400 uppercase tracking-wider">Weekly Leads Trend</span>
           
-          <div className="h-[200px] flex items-end gap-3 justify-between border-b border-l border-gray-150 pb-2 pl-2">
+          <div className="h-[200px] flex items-end gap-2 sm:gap-3 justify-between border-b border-l border-gray-150 pb-2 pl-2 overflow-hidden">
             {[
-              { week: 'Week 1', val: Math.round(62 * f) },
-              { week: 'Week 2', val: Math.round(98 * f) },
-              { week: 'Week 3', val: Math.round(124 * f) },
-              { week: 'Week 4', val: Math.round(158 * f) }
+              { week: 'Wk 1', val: Math.round(62 * f) },
+              { week: 'Wk 2', val: Math.round(98 * f) },
+              { week: 'Wk 3', val: Math.round(124 * f) },
+              { week: 'Wk 4', val: Math.round(158 * f) }
             ].map(w => {
               const maxVal = Math.round(180 * f) || 1;
               const pct = (w.val / maxVal) * 100;
@@ -280,7 +282,7 @@ export const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({ userRole
         </div>
 
         {/* Source Distribution donut/bar chart */}
-        <div className="lg:col-span-1 bg-white border border-gray-150 p-5 rounded-2xl shadow-sm flex flex-col gap-4">
+        <div className="lg:col-span-1 bg-white border border-gray-150 p-4 sm:p-5 rounded-2xl shadow-sm flex flex-col gap-4 overflow-hidden max-w-full">
           <span className="text-xs font-bold text-gray-400 uppercase tracking-wider">Lead Source Share</span>
           
           <div className="space-y-4 text-xs font-semibold">
@@ -291,7 +293,7 @@ export const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({ userRole
             ].map(s => (
               <div key={s.source} className="flex flex-col gap-1 text-xs">
                 <div className="flex justify-between items-center font-bold text-gray-800">
-                  <span>{s.source}</span>
+                  <span className="truncate pr-1">{s.source}</span>
                   <span>{s.pct}%</span>
                 </div>
                 <div className="w-full h-2 rounded bg-gray-100 overflow-hidden">
@@ -305,19 +307,19 @@ export const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({ userRole
       </div>
 
       {/* 5. Report Generator Desk */}
-      <div className="bg-white p-5 border border-gray-150 rounded-2xl shadow-sm flex flex-col gap-5">
+      <div className="bg-white p-4 sm:p-5 border border-gray-150 rounded-2xl shadow-sm flex flex-col gap-5 overflow-hidden max-w-full">
         <div className="flex items-center gap-2 border-b border-gray-100 pb-3">
           <BarChart3 className="h-4 w-4 text-gray-400" />
           <span className="text-xs font-bold text-gray-400 uppercase tracking-wider">Report Generator Desk</span>
         </div>
 
-        <div className="flex flex-col sm:flex-row gap-4 items-end text-xs">
-          <div className="flex flex-col gap-1.5">
+        <div className="flex flex-col sm:flex-row gap-4 items-stretch sm:items-end text-xs w-full">
+          <div className="flex flex-col gap-1.5 flex-1 max-w-xs w-full">
             <span className="font-bold text-gray-500">Report Category Choice</span>
             <select
               value={reportType}
               onChange={e => setReportType(e.target.value as any)}
-              className="border border-gray-200 rounded-lg p-2 text-xs focus:outline-none focus:border-[#EB0A1E] bg-white font-semibold text-gray-750"
+              className="border border-gray-200 rounded-lg p-2.5 text-xs focus:outline-none focus:border-[#EB0A1E] bg-white font-semibold text-gray-750 w-full"
             >
               <option value="DAILY">Daily Overview</option>
               <option value="WEEKLY">Weekly Performance</option>
@@ -332,7 +334,7 @@ export const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({ userRole
           <button
             onClick={handleGenerateReport}
             disabled={generating}
-            className="px-4 py-2 bg-gray-900 hover:bg-gray-800 text-white rounded-xl text-xs font-bold transition-all cursor-pointer disabled:opacity-50"
+            className="px-4 py-3 bg-gray-900 hover:bg-gray-800 text-white rounded-xl text-xs font-bold transition-all cursor-pointer disabled:opacity-50 w-full sm:w-auto text-center shrink-0"
           >
             {generating ? 'Generating compilation...' : 'Generate Operational Report'}
           </button>
